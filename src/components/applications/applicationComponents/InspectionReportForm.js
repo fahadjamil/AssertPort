@@ -66,10 +66,10 @@ export function InspectionReportForm({
     "inspectorName",
     "vehicleCondition",
     "mileage",
-    // "bodyCondition",
-    // "engineCondition",
-    // "interiorCondition",
-    // "tiresCondition",
+    "bodyCondition",
+    "engineCondition",
+    "interiorCondition",
+    "tiresCondition",
     "accidentHistory",
     "estimatedValue",
   ];
@@ -231,7 +231,7 @@ export function InspectionReportForm({
                   />
                 </Form.Group>
               </Col>
-               <Col md={6}>
+              <Col md={6}>
                 <Form.Group controlId="vehicleCondition">
                   <Form.Label>Vehicle Condition</Form.Label>
                   <Form.Select
@@ -265,21 +265,89 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
+              <Col md={6}>
+                <Form.Group controlId="bodyCondition">
+                  <Form.Label>Body Condition</Form.Label>
+                  <Form.Select
+                    value={formData.bodyCondition}
+                    onChange={(e) =>
+                      handleChange("bodyCondition", e.target.value)
+                    }
+                  >
+                    <option>Select</option>
+                    <option value="excellent">Excellent</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group controlId="engineCondition">
+                  <Form.Label>Engine Condition</Form.Label>
+                  <Form.Select
+                    value={formData.engineCondition}
+                    onChange={(e) =>
+                      handleChange("engineCondition", e.target.value)
+                    }
+                  >
+                    <option>Select</option>
+                    <option value="excellent">Excellent</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group controlId="accidentHistory">
+                  <Form.Label>Accident History</Form.Label>
+                  <Form.Select
+                    value={formData.accidentHistory}
+                    onChange={(e) =>
+                      handleChange("accidentHistory", e.target.value)
+                    }
+                  >
+                    <option>Select</option>
+                    <option value="none">No Accidents</option>
+                    <option value="minor">Minor Accidents</option>
+                    <option value="major">Major Accidents</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group controlId="interiorCondition">
+                  <Form.Label>Interior Condition</Form.Label>
+                  <Form.Select
+                    value={formData.interiorCondition}
+                    onChange={(e) =>
+                      handleChange("interiorCondition", e.target.value)
+                    }
+                  >
+                    <option>Select</option>
+                    <option value="none">No Accidents</option>
+                    <option value="minor">Minor Accidents</option>
+                    <option value="major">Major Accidents</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+                <Col md={6}>
+                <Form.Group controlId="tiresCondition">
+                  <Form.Label>Tyres Condition</Form.Label>
+                  <Form.Select
+                    value={formData.tiresCondition}
+                    onChange={(e) =>
+                      handleChange("tiresCondition", e.target.value)
+                    }
+                  >
+                    <option>Select</option>
+                    <option value="none">No Accidents</option>
+                    <option value="minor">Minor Accidents</option>
+                    <option value="major">Major Accidents</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
             </Row>
-            <Form.Group className="mb-4" controlId="accidentHistory">
-              <Form.Label>Accident History</Form.Label>
-              <Form.Select
-                value={formData.accidentHistory}
-                onChange={(e) =>
-                  handleChange("accidentHistory", e.target.value)
-                }
-              >
-                <option>Select</option>
-                <option value="none">No Accidents</option>
-                <option value="minor">Minor Accidents</option>
-                <option value="major">Major Accidents</option>
-              </Form.Select>
-            </Form.Group>
           </Tab>
         </Tabs>
 
