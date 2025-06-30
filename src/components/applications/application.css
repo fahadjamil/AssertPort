@@ -1,0 +1,21 @@
+.table-responsive {
+  overflow: visible !important;
+}
+
+table {
+  overflow: visible !important;
+  position: relative;
+}
+
+.dropdown-menu {
+  z-index: 1050; /* or higher */
+}
+@media (min-width: 992px) {
+    .modal-lg, .modal-xl {
+        --bs-modal-width: 1002px !important;
+    }
+}
+.dropdown-menu-end {
+  right: 0 !important;
+  left: auto !important;
+}
