@@ -3,7 +3,7 @@ import MainNav from "../shared/main-nav";
 
 const DashboardLayout=({ children })=> {
   return (
-    <div className="d-flex">
+    <div className="d-flex" style={{ background: "#EFF1F4" }}>
       <MainNav />
       <main
         className="flex-grow-1 p-4"

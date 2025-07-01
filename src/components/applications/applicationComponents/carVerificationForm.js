@@ -25,7 +25,6 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
     uploadedImage: null,
     comments: "",
   });
-  console.log("FormData" + formData.engineNumber);
 
   const [isVerifying, setIsVerifying] = useState(false);
   const [isStatusLoading, setIsLoading] = useState(false);
@@ -44,7 +43,7 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
       await axios.put(endpoint, {
         id: formData.id,
         notes: formData.comments,
-        statusKey: "Inspection",
+        statusKey: "inspection",
       });
       setActiveTab("inspection");
     } catch (error) {
@@ -79,11 +78,12 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
       const form = new FormData();
       form.append("id", formData.id);
       form.append("carVerificationPhoto", previewFile);
+      console.log("form" + formData);
 
       const endpoint =
-        application?.formType === "Salaried"
-          ? "https://credit-port-backend.vercel.app//v1/salaried/individual/update-required-document"
-          : "https://credit-port-backend.vercel.app/v1/business/individual/update-document";
+        "https://credit-port-backend.vercel.app/v1/salaried/individual/update-vehicle-verfication-photo";
+
+      console.log("endpoint" + endpoint);
 
       const res = await axios.put(endpoint, form, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -132,12 +132,10 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
     }
 
     const endpoint =
-      application?.formType === "Salaried"
-        ? "https://credit-port-backend.vercel.app/v1/salaried/individual/update-document"
-        : "https://credit-port-backend.vercel.app/v1/business/individual/update-document";
+      "https://credit-port-backend.vercel.app/v1/salaried/individual/update-document";
 
     try {
-      const res = await axios.put(endpoint, form, {
+      const res = await axios.post(endpoint, form, {
         // headers: { "Content-Type": "multipart/form-data" },
       });
       console.log("Reupload success:", res.data);

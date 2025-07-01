@@ -32,7 +32,7 @@ const ApplicationStatusTimeline = ({ log, user }) => {
           : "-";
 
         return (
-          <div key={index} className="d-flex gap-3">
+          <div key={index} className="d-flex gap-1">
             <div className="d-flex flex-column align-items-center">
               <div
                 className="rounded-circle border bg-light d-flex align-items-center justify-content-center"

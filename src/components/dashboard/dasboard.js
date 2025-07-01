@@ -4,10 +4,10 @@ import DashboardContent from "./dashboardContent";
 
 const DashboardPage = () => {
   return (
-    <>
+    <div style={{ background: "#EFF1F4" }}>
       <DashboardContent />
       <Applications />
-    </>
+    </div>
   );
 };
 

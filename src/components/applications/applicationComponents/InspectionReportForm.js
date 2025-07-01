@@ -325,13 +325,14 @@ export function InspectionReportForm({
                     }
                   >
                     <option>Select</option>
-                    <option value="none">No Accidents</option>
-                    <option value="minor">Minor Accidents</option>
-                    <option value="major">Major Accidents</option>
+                    <option value="excellent">Excellent</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
-                <Col md={4}>
+              <Col md={4}>
                 <Form.Group controlId="tiresCondition">
                   <Form.Label>Tyres Condition</Form.Label>
                   <Form.Select
@@ -341,9 +342,10 @@ export function InspectionReportForm({
                     }
                   >
                     <option>Select</option>
-                    <option value="none">No Accidents</option>
-                    <option value="minor">Minor Accidents</option>
-                    <option value="major">Major Accidents</option>
+                    <option value="excellent">Excellent</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
                   </Form.Select>
                 </Form.Group>
               </Col>

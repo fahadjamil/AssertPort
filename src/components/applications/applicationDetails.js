@@ -91,7 +91,7 @@ function ApplicationPage() {
       "Car Verification Pending": "warning",
       "Credit Score": "success",
       Inspection: "info",
-      "Inspection Listed By Customer": "light",
+      "Inspection Listed By Customer": "info",
       Evaluation: "primary",
       Contract: "success",
       "Inspection listing required": "danger",
@@ -111,7 +111,7 @@ function ApplicationPage() {
   }
 
   return (
-    <Container fluid className="d-flex flex-column min-vh-100">
+    <Container fluid className="d-flex flex-column min-vh-100" style={{ background: "#EFF1F4" }}>
       <header className="sticky-top border-bottom bg-white py-3">
         <Row className="align-items-center">
           <Col className="d-flex align-items-center gap-2">
@@ -139,7 +139,7 @@ function ApplicationPage() {
             "audit",
           ].map((tab) => (
             <Nav.Item key={tab}>
-              <Nav.Link eventKey={tab} className="text-capitalize">
+              <Nav.Link eventKey={tab} className="text-capitalize" style={{ color: "black" }}>
                 {tab === "kyc" ? "Application" : tab}
               </Nav.Link>
             </Nav.Item>
@@ -189,7 +189,7 @@ function ApplicationPage() {
                 </div>
 
                 {/* Vehicle Information */}
-                <div className="col-md-12">
+                <div className="col-md-12 my-2">
                   <div className="card">
                     <div className="card-header d-flex align-items-center gap-2">
                       <i className="bi bi-truck-front-fill text-success"></i>
@@ -238,7 +238,7 @@ function ApplicationPage() {
                 </div>
 
                 {/* Loan Information */}
-                <div className="col-md-12 mt-4">
+                <div className="col-md-12 my-2">
                   <div className="card">
                     <div className="card-header d-flex align-items-center gap-2">
                       <i className="bi bi-credit-card-fill text-warning"></i>
@@ -278,7 +278,7 @@ function ApplicationPage() {
 
               {/* Timeline */}
               <div className="col-md-3">
-                <div className="card">
+                <div className="card mb-2">
                   <div className="card-header">
                     <h5 className="mb-0">Application Timeline</h5>
                     <small className="text-muted">

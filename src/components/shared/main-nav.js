@@ -11,7 +11,7 @@ const MainNav = () => {
     <div className="d-flex">
       {/* Sidebar */}
       <div
-        className={`bg-light border-end vh-100 position-fixed d-flex flex-column justify-content-between ${
+        className={`bg-dark border-end vh-100 position-fixed d-flex flex-column justify-content-between ${
           collapsed ? "sidebar-collapsed" : "sidebar-expanded"
         }`}
         style={{
