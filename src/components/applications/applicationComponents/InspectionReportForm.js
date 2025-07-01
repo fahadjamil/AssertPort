@@ -169,7 +169,7 @@ export function InspectionReportForm({
         <Tabs defaultActiveKey="manual" className="mb-3">
           <Tab eventKey="manual" title="Inspection Report Manual Entry">
             <Row className="mb-3">
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="inspectionDate">
                   <Form.Label>Inspection Date</Form.Label>
                   <Form.Control
@@ -181,7 +181,7 @@ export function InspectionReportForm({
                   />
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="inspectionLocation">
                   <Form.Label>Inspection Location</Form.Label>
                   <Form.Select
@@ -197,7 +197,7 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="inspectorName">
                   <Form.Label>Inspector Name</Form.Label>
                   <Form.Control
@@ -209,7 +209,7 @@ export function InspectionReportForm({
                   />
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="mileage">
                   <Form.Label>Mileage (km)</Form.Label>
                   <Form.Control
@@ -219,7 +219,7 @@ export function InspectionReportForm({
                   />
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="estimatedValue">
                   <Form.Label>Estimated Value (PKR)</Form.Label>
                   <Form.Control
@@ -231,7 +231,7 @@ export function InspectionReportForm({
                   />
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="vehicleCondition">
                   <Form.Label>Vehicle Condition</Form.Label>
                   <Form.Select
@@ -248,7 +248,7 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="vehicleCondition">
                   <Form.Label>Vehicle Condition</Form.Label>
                   <Form.Select
@@ -265,7 +265,7 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="bodyCondition">
                   <Form.Label>Body Condition</Form.Label>
                   <Form.Select
@@ -282,7 +282,7 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="engineCondition">
                   <Form.Label>Engine Condition</Form.Label>
                   <Form.Select
@@ -299,7 +299,7 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="accidentHistory">
                   <Form.Label>Accident History</Form.Label>
                   <Form.Select
@@ -315,7 +315,7 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={4}>
                 <Form.Group controlId="interiorCondition">
                   <Form.Label>Interior Condition</Form.Label>
                   <Form.Select
@@ -331,7 +331,7 @@ export function InspectionReportForm({
                   </Form.Select>
                 </Form.Group>
               </Col>
-                <Col md={6}>
+                <Col md={4}>
                 <Form.Group controlId="tiresCondition">
                   <Form.Label>Tyres Condition</Form.Label>
                   <Form.Select
