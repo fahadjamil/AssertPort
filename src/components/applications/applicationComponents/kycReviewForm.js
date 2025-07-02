@@ -287,7 +287,8 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
     setVerificationError(null);
 
     try {
-      const endpoint = "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status";
+      const endpoint =
+        "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status";
 
       const response = await axios.put(endpoint, {
         id: formData.id,
@@ -330,10 +331,7 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
 
     try {
       const endpoint =
-        application?.formType === "Salaried"
-          ? "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status"
-          : "https://credit-port-backend.vercel.app/v1/business/individual/update/status";
-
+        "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status";
       const response = await axios.put(endpoint, {
         id: formData.id,
         notes: formData.comments,
@@ -454,7 +452,11 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                   <label className="form-label">Gross Salary (PKR)</label>
                   <input
                     className="form-control"
-                    value={formData.grossSalary?Number(formData.grossSalary).toLocaleString():''}
+                    value={
+                      formData.grossSalary
+                        ? Number(formData.grossSalary).toLocaleString()
+                        : ""
+                    }
                     readOnly
                   />
                 </div>
