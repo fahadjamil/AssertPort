@@ -45,7 +45,7 @@
   background: #4caf50;
 }
 
-.timeline-icon.in_progress {
+.timeline-icon {
   background: #fb8c00;
 }
 
@@ -53,6 +53,6 @@
   background: #6c757d;
 }
 
-.timeline-icon.failed {
+.timeline-icon.inspection {
   background: #f44336;
 }

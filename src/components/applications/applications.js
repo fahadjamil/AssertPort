@@ -22,6 +22,9 @@ const Applications = ({ status }) => {
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showInProgressOnly, setShowInProgressOnly] = useState(false);
+  const [showDocumentPendingOnly, setshowDocumentPendingOnly] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const applicationsPerPage = 10;
   const navigate = useNavigate();
@@ -143,11 +146,24 @@ const Applications = ({ status }) => {
     const reg = app.Car?.registrationNumber?.toLowerCase() || "";
     const term = searchTerm.toLowerCase();
 
-    return name.includes(term) || cnic.includes(term) || reg.includes(term);
+    const matchesSearch =
+      name.includes(term) || cnic.includes(term) || reg.includes(term);
+
+    const isInProgress = showInProgressOnly
+      ? app.currentStatus?.label === "In Progress"
+      : true;
+
+    const isDocumentPending = showDocumentPendingOnly
+      ? app.currentStatus?.label === "Document Pending"
+      : true;
+
+    return matchesSearch && isInProgress && isDocumentPending;
   });
 
   // 📄 Pagination logic
-  const totalPages = Math.ceil(filteredApplications.length / applicationsPerPage);
+  const totalPages = Math.ceil(
+    filteredApplications.length / applicationsPerPage
+  );
   const paginatedApplications = filteredApplications.slice(
     (currentPage - 1) * applicationsPerPage,
     currentPage * applicationsPerPage
@@ -178,16 +194,21 @@ const Applications = ({ status }) => {
     );
 
   return (
-    <Container fluid className="my-4" style={{ background: "#EFF1F4", minHeight: "100vh" }}>
+    <Container
+      fluid
+      className="my-4"
+      style={{ background: "#EFF1F4", minHeight: "100vh" }}
+    >
       <Row className="mb-4 align-items-center">
         <Col>
           <h3 className="fw-semibold text-dark mb-1">📄 Applications</h3>
           <p className="text-muted mb-0">Manage and review user applications</p>
         </Col>
+        <Col md="2" className="mt-2 mt-md-0"></Col>
         <Col md="4">
           <InputGroup>
             <Form.Control
-              placeholder="Search by name, CNIC or registration..."
+              placeholder="Search by Name, CNIC or Registration..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -200,6 +221,29 @@ const Applications = ({ status }) => {
           </InputGroup>
         </Col>
       </Row>
+      <div className="d-flex justify-content-start my-2">
+        <Button
+          variant={showInProgressOnly ? "success" : "outline-secondary"}
+          className="w-80 btn btn-sm mx-1"
+          onClick={() => {
+            setShowInProgressOnly(!showInProgressOnly);
+            setCurrentPage(1);
+          }}
+        >
+          In Progress
+        </Button>
+
+        <Button
+          variant={showDocumentPendingOnly ? "success" : "outline-secondary"}
+          className="w-80 btn btn-sm mx-1"
+          onClick={() => {
+            setshowDocumentPendingOnly(!showDocumentPendingOnly);
+            setCurrentPage(1);
+          }}
+        >
+          Document Pending
+        </Button>
+      </div>
 
       <div className="card shadow-sm border-0 rounded-4">
         <div className="card-body p-4">
@@ -227,9 +271,9 @@ const Applications = ({ status }) => {
                     <td>{app.Car?.registrationNumber ?? "-"}</td>
                     <td>
                       {app.application_status_logs[0]?.createdAt
-                        ? moment(app.application_status_logs[0].createdAt).format(
-                            "DD/MM/YYYY hh:mm A"
-                          )
+                        ? moment(
+                            app.application_status_logs[0].createdAt
+                          ).format("DD/MM/YYYY hh:mm A")
                         : "-"}
                     </td>
                     <td>{getStatusBadge(app.currentStatus.label)}</td>

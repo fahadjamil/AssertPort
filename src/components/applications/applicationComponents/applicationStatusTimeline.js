@@ -3,12 +3,16 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import moment from "moment";
 
 const ApplicationStatusTimeline = ({ log, user }) => {
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status, isLastItem) => {
+    if (isLastItem) {
+      return <i className="bi bi-clock-fill text-warning fs-5"></i>;
+    }
+
     switch (status) {
       case "completed":
         return <i className="bi bi-check-circle-fill text-success fs-5"></i>;
       case "in_progress":
-        return <i className="bi bi-clock-fill text-warning fs-5"></i>;
+        return <i className="bi bi-clock text-secondary fs-5"></i>;
       case "pending":
         return <i className="bi bi-clock text-secondary fs-5"></i>;
       case "failed":
@@ -31,24 +35,28 @@ const ApplicationStatusTimeline = ({ log, user }) => {
           ? moment(item.createdAt).format("DD/MM/YYYY hh:mm A")
           : "-";
 
+        const circleStyle = {
+          width: "32px",
+          height: "32px",
+          backgroundColor: "#f8f9fa",
+          border: "1px solid #dee2e6",
+        };
+
         return (
           <div key={index} className="d-flex gap-1">
             <div className="d-flex flex-column align-items-center">
               <div
-                className="rounded-circle border bg-light d-flex align-items-center justify-content-center"
-                style={{ width: "32px", height: "32px" }}
+                className="rounded-circle d-flex align-items-center justify-content-center"
+                style={circleStyle}
               >
-                {getStatusIcon(item.application_status.key)}
+                {getStatusIcon(item.application_status.key, isLastItem)}
               </div>
-              {!isLastItem && (
-                <div
-                  style={{
-                    height: "100%",
-                    width: "2px",
-                    backgroundColor: "#dee2e6",
-                  }}
-                ></div>
-              )}
+              <div
+                style={{
+                  height: "100%",
+                  width: "2px",
+                }}
+              ></div>
             </div>
 
             <div>
@@ -69,4 +77,5 @@ const ApplicationStatusTimeline = ({ log, user }) => {
     </div>
   );
 };
+
 export default ApplicationStatusTimeline;

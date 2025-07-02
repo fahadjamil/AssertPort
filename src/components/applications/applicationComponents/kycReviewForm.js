@@ -287,10 +287,7 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
     setVerificationError(null);
 
     try {
-      const endpoint =
-        application?.formType === "Salaried"
-          ? "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status"
-          : "https://credit-port-backend.vercel.app/v1/business/individual/update/status";
+      const endpoint = "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status";
 
       const response = await axios.put(endpoint, {
         id: formData.id,
@@ -457,7 +454,7 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                   <label className="form-label">Gross Salary (PKR)</label>
                   <input
                     className="form-control"
-                    value={formData.grossSalary}
+                    value={formData.grossSalary?Number(formData.grossSalary).toLocaleString():''}
                     readOnly
                   />
                 </div>
@@ -557,7 +554,11 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                   </label>
                   <input
                     className="form-control"
-                    value={formData.netHouseholdIncome}
+                    value={
+                      formData.netHouseholdIncome
+                        ? Number(formData.netHouseholdIncome).toLocaleString()
+                        : ""
+                    }
                     readOnly
                   />
                 </div>
@@ -574,7 +575,11 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                     <label className="form-label">Rent Amount (PKR)</label>
                     <input
                       className="form-control"
-                      value={formData.rentAmount}
+                      value={
+                        formData.rentAmount
+                          ? Number(formData.rentAmount).toLocaleString()
+                          : ""
+                      }
                       readOnly
                     />
                   </div>
@@ -705,7 +710,11 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                 <label className="form-label">Credit Limit (PKR)</label>
                 <input
                   className="form-control"
-                  value={formData.creditLimit}
+                  value={
+                    formData.creditLimit
+                      ? Number(formData.creditLimit).toLocaleString()
+                      : ""
+                  }
                   readOnly
                 />
               </div>
