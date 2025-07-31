@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'https://credit-port-backend.vercel.app/v1/admin/', // Replace with your actual base URL
+  baseURL: process.env.REACT_APP_CREDIT_PORT_BASE_URL, // Replace with your actual base URL
   timeout: 10000,
 });
 

@@ -1,84 +1,115 @@
-import React from "react";
-import "./dashboardContent.css"; // We'll add styling here
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import "./dashboardContent.css";
+import LoadingSpinner from "../shared/LoadingSpinner";
 
-const stats = [
+const defaultCards = [
   {
     title: "Total Applications",
-    value: 42,
-    change: "+5 from last week",
+    key: "totalApplications",
+    value: "-",
     icon: "bi-file-earmark-text",
-    bg: "primary",
+    bgColor: "primary",
   },
   {
     title: "Pending Review",
-    value: 16,
-    change: "+3 from yesterday",
+    key: "pendingApplications",
+    value: "-",
     icon: "bi-clock-history",
-    bg: "warning",
+    bgColor: "warning",
   },
   {
     title: "Approved Applications",
-    value: 18,
-    change: "+2 from last week",
+    key: "approvedApplications",
+    value: "-",
     icon: "bi-check-circle",
-    bg: "success",
+    bgColor: "success",
   },
   {
     title: "Rejected Applications",
-    value: 8,
-    change: "-2 from last week",
+    key: "rejectedApplications",
+    value: "-",
     icon: "bi-exclamation-circle",
-    bg: "danger",
+    bgColor: "danger",
   },
   {
     title: "Active Users",
-    value: 12,
-    change: "+1 from last month",
+    key: "activeUserHaveApplicationCount",
+    value: "-",
     icon: "bi-people",
-    bg: "info",
+    bgColor: "info",
   },
   {
-    title: "System Activity",
-    value: "87%",
-    change: "+2% from yesterday",
-    icon: "bi-activity",
-    bg: "dark",
+    title: "Total Active Users",
+    key: "totalActiveUsers",
+    value: "-",
+    icon: "bi-person-check",
+    bgColor: "secondary",
   },
 ];
 
 export default function Dashboard() {
+  const [cards, setCards] = useState(defaultCards);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
+
+    const fetchDashboardMetrics = async () => {
+      try {
+        const res = await axios.get(`${baseURL}/admin/dashboard-metrics`);
+        const data = res.data?.data;
+
+        if (data) {
+          const updated = defaultCards.map((card) => ({
+            ...card,
+            value: data[card.key] ?? "-",
+          }));
+          setCards(updated);
+        } else {
+          setError("Invalid data from server.");
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        setError("Failed to load dashboard.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardMetrics();
+  }, []);
+
   return (
     <div className="container-fluid py-4" style={{ background: "#EFF1F4" }}>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="fw-bold">Dashboard</h2>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary btn-sm">
-            <i className="bi bi-clock me-2"></i> Today
-          </button>
-          <button className="btn btn-outline-secondary btn-sm">
-            <i className="bi bi-filter me-2"></i> Filter
-          </button>
-        </div>
       </div>
-
-      <div className="row g-4">
-        {stats.map((item, idx) => (
-          <div className="col-12 col-md-6 col-lg-4" key={idx}>
-            <div className="card card-stat h-100 shadow-sm border-0">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-start mb-3">
-                  <div className={`icon-circle bg-${item.bg}`}>
-                    <i className={`bi ${item.icon}`}></i>
+      {loading ? (
+        <LoadingSpinner asOverlay />
+      ) : error ? (
+        <div className="alert alert-danger text-center">{error}</div>
+      ) : (
+        <div className="row g-4">
+          {cards.map((card, idx) => (
+            <div className="col-12 col-md-6 col-lg-4" key={idx}>
+              <div className="card card-stat h-100 shadow-sm border-0">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <div className={`icon-circle bg-${card.bgColor}`}>
+                      <i className={`bi ${card.icon}`}></i>
+                    </div>
+                    <span className="text-muted small">{card.title}</span>
                   </div>
-                  <span className="text-muted small">{item.title}</span>
+                  <h3 className="fw-bold mb-1">{card.value}</h3>
+                  <p className="text-muted small mb-0">{card.note}</p>
                 </div>
-                <h3 className="fw-bold mb-1">{item.value}</h3>
-                <p className="text-muted small mb-0">{item.change}</p>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

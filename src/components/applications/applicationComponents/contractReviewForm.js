@@ -1,137 +1,293 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import axios from "axios";
-import { Application } from "../../../model/application.model";
+import Popup from "../../shared/Popup";
 
-const ContractReviewForm = ({ application, setActiveTab, setApplication }) => {
-  const [formData, setFormData] = useState({
-    contractNumber: application?.FinanceContract?.contractNumber ?? "",
-    contractDate: application?.FinanceContract?.contractDate ?? "",
-    loanAmount: application?.FinanceContract?.financeAmount ?? "",
-    loanTerm: application?.FinanceContract?.tenureMonth ?? "",
-    monthlyPayment: application?.FinanceContract?.monthlyInstallment ?? "",
-    totalPayable: application?.FinanceContract?.totalPayment ?? "",
-    contractStatus: application?.contractStatus ?? "pending",
-    userSignatureStatus: "pending",
-    adminSignatureStatus: "pending",
-    comments: "",
+const ContractReviewForm = ({ application, setActiveTab,refreshApplication }) => {
+  const printRef = useRef();
+  const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [popup, setPopup] = useState({
+    type: "",
+    message: "",
+    show: false,
   });
 
-  const [isGenerating, setIsGenerating] = useState(false);
+  const user = application?.user || {};
+  const asset = application?.Asset || {};
+  const bank = application?.user_bank_detail || {};
+  const inspection = application?.CarInspection;
+  const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
 
-  const handleGenerateContract = async () => {
-    setIsGenerating(true);
+  const formatPKR = (val) =>
+    val != null && !isNaN(val) ? Number(val).toLocaleString() : "N/A";
+
+  const fullName = `${user?.firstName || ""} ${user?.lastName || ""}`;
+  const vehicle =
+    asset?.make?.name && asset?.model?.name && asset?.year?.year
+      ? `${asset.make.name} ${asset.model.name} (${asset.year.year})`
+      : "N/A";
+
+  const handleDownloadPDF = async () => {
+    const element = printRef.current;
+    if (!element) return alert("Content not found to download.");
+
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("vehicle-financing-agreement.pdf");
+  };
+  const handleStatuesSubmission = async () => {
+    if (!comment.trim()) {
+      setPopup({
+        type: "error",
+        message: "Please enter a comment before submitting.",
+        show: true,
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      const endpoint =
-        application?.formType === "Salaried"
-          ? "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status"
-          : "https://credit-port-backend.vercel.app/v1/business/individual/update/status";
-
-      const response = await axios.put(endpoint, {
+      await axios.put(`${baseURL}/application/update/status`, {
         id: application?.id,
-        notes: formData.comments,
-        contractStatus: "generated",
-        statusKey: "file collection",
+        notes: comment,
+        statusKey: "file_collection",
       });
 
-      if (response.status === 200) {
-        setFormData({ ...formData, contractStatus: "generated" });
-        setApplication("generated");
+      setPopup({
+        type: "success",
+        message: "Status updated successfully.",
+        show: true,
+      });
+       await refreshApplication();
+       setTimeout(() => {
         setActiveTab("collection");
-        alert("Contract generated successfully");
-      } else {
-        alert("Failed to generate contract");
-      }
-    } catch (error) {
-      alert("An error occurred while generating the contract");
-      console.error(error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+      }, 1500); 
 
-  const getStatusLabel = (status) => {
-    const map = {
-      pending: "secondary",
-      generated: "primary",
-      verified: "success",
-    };
-    return map[status] || "dark";
+
+      
+    } catch (error) {
+      console.error("Failed to update status:", error);
+
+      setPopup({
+        type: "error",
+        message:
+          error?.response?.data?.message ||
+          error.message ||
+          "Something went wrong while submitting.",
+        show: true,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="container-fluid mt-4">
-      <div className="card shadow-sm">
+      <Popup
+        type={popup.type}
+        message={popup.message}
+        show={popup.show}
+        onClose={() => setPopup({ ...popup, show: false })}
+        duration={5000}
+      />
+      <h2 className="fw-bold text-center mb-4 text-primary">
+        Vehicle Financing Agreement
+      </h2>
+
+      <div className="card shadow">
         <div className="card-header d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Contract Review</h5>
-          <span className={`badge text-bg-${getStatusLabel(formData.contractStatus)}`}>
-            {formData.contractStatus.charAt(0).toUpperCase() + formData.contractStatus.slice(1)}
-          </span>
-        </div>
-
-        <div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label htmlFor="contractNumber" className="form-label">Contract Number</label>
-              <input id="contractNumber" className="form-control" value={formData.contractNumber} readOnly />
-            </div>
-            <div className="col-md-6">
-              <label htmlFor="contractDate" className="form-label">Contract Date</label>
-              <input id="contractDate" className="form-control" value={formData.contractDate} readOnly />
-            </div>
-            <div className="col-md-6">
-              <label htmlFor="loanAmount" className="form-label">Loan Amount (PKR)</label>
-              <input id="loanAmount" className="form-control" value={formData.loanAmount} readOnly />
-            </div>
-            <div className="col-md-6">
-              <label htmlFor="loanTerm" className="form-label">Loan Term (Months)</label>
-              <input id="loanTerm" className="form-control" value={formData.loanTerm} readOnly />
-            </div>
-            <div className="col-md-6">
-              <label htmlFor="monthlyPayment" className="form-label">Monthly Payment</label>
-              <input id="monthlyPayment" className="form-control" value={formData.monthlyPayment} readOnly />
-            </div>
-            <div className="col-md-6">
-              <label htmlFor="totalPayable" className="form-label">Total Payable (PKR)</label>
-              <input id="totalPayable" className="form-control" value={formData.totalPayable} readOnly />
-            </div>
+          <div className="d-flex align-items-center">
+            <i className="bi bi-file-earmark-text fs-4 me-2 text-primary"></i>
+            <h5 className="mb-0">Agreement Summary</h5>
           </div>
-
-          <hr className="my-4" />
-
-          <h6 className="mb-3">Contract Document</h6>
-          {formData.contractStatus === "pending" ? (
-            <div className="text-center border p-4 rounded bg-light">
-              <p className="mb-3">Contract not generated yet.</p>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleGenerateContract}
-                disabled={isGenerating}
-              >
-                {isGenerating ? "Generating..." : "Generate Contract"}
-              </button>
-            </div>
-          ) : (
-            <div className="border p-3 rounded d-flex justify-content-between align-items-center">
-              <span className="fw-medium">Car_Refinancing_Contract.pdf</span>
-              <div className="btn-group btn-group-sm">
-                <a href="/contract.pdf" className="btn btn-outline-secondary" download>Download</a>
-                <a href="/contract.pdf" className="btn btn-outline-secondary" target="_blank" rel="noreferrer">Preview</a>
-              </div>
-            </div>
-          )}
+          <Button variant="outline-primary" onClick={handleDownloadPDF}>
+            Download PDF
+          </Button>
         </div>
 
-        <div className="card-footer">
-          <label htmlFor="comments" className="form-label">Comments</label>
+        <div className="card-body bg-light">
+          <Container ref={printRef} className="p-3 bg-white">
+            <Row>
+              {/* Left Column */}
+              <Col md={6}>
+                <Card className="mb-3 border-primary">
+                  <Card.Header as="h5">1. Parties to the Agreement</Card.Header>
+                  <Card.Body>
+                    <p>
+                      <strong>Financier:</strong> United Bank Limited (UBL)
+                    </p>
+                    <p>
+                      <strong>Borrower:</strong> {fullName}
+                    </p>
+                    <p>
+                      <strong>CNIC:</strong> {user?.cnic_number || "N/A"}
+                    </p>
+                    <p>
+                      <strong>NTN:</strong> {application?.ntn || "N/A"}
+                    </p>
+                    <p>
+                      <strong>DOB:</strong> {application?.dob || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Phone:</strong> +92 {user?.phone || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Email:</strong> {user?.email || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Address:</strong>{" "}
+                      {application?.currentAddress || "N/A"},{" "}
+                      {application?.city || ""}
+                    </p>
+                  </Card.Body>
+                </Card>
+
+                <Card className="mb-3 border-warning">
+                  <Card.Header as="h5">3. Vehicle Information</Card.Header>
+                  <Card.Body>
+                    <p>
+                      <strong>Make & Model:</strong> {vehicle}
+                    </p>
+                    <p>
+                      <strong>Registration #:</strong>{" "}
+                      {asset?.registrationNumber || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Engine #:</strong> {asset?.engineNumber || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Chassis #:</strong>{" "}
+                      {asset?.chassisNumber || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Mileage:</strong> {asset?.mileage || "N/A"} km
+                    </p>
+                    <p>
+                      <strong>Condition:</strong> {asset?.condition || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Market Value:</strong> PKR{" "}
+                      {formatPKR(asset.marketValue)}
+                    </p>
+                  </Card.Body>
+                </Card>
+              </Col>
+
+              {/* Right Column */}
+              <Col md={6}>
+                <Card className="mb-3 border-success">
+                  <Card.Header as="h5">2. Loan Details</Card.Header>
+                  <Card.Body>
+                    <p>
+                      <strong>Form Number:</strong>{" "}
+                      {application?.formNumber || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Estimated Financing:</strong> PKR{" "}
+                      {formatPKR(application.estimate_financing)}
+                    </p>
+                    <p>
+                      <strong>Employment:</strong>{" "}
+                      {application?.designation || "N/A"} at{" "}
+                      {application?.companyName || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Gross Salary:</strong> PKR{" "}
+                      {formatPKR(application.grossSalary)}
+                    </p>
+                    <p>
+                      <strong>Net Household Income:</strong> PKR{" "}
+                      {formatPKR(application.netHouseholdIncome)}
+                    </p>
+                    <p>
+                      <strong>Residential Status:</strong>{" "}
+                      {application?.residentialStatus || "N/A"}
+                    </p>
+                  </Card.Body>
+                </Card>
+
+                <Card className="mb-3 border-info">
+                  <Card.Header as="h5">4. Bank Details</Card.Header>
+                  <Card.Body>
+                    <p>
+                      <strong>Account Title:</strong>{" "}
+                      {bank?.accountTitle || "N/A"}
+                    </p>
+                    <p>
+                      <strong>IBAN:</strong> {bank?.iban || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Bank Name:</strong> {bank?.bank?.name || "N/A"}
+                    </p>
+                  </Card.Body>
+                </Card>
+              </Col>
+
+              {/* Declaration Full Width */}
+              <Col md={12}>
+                <Card className="mb-3 border-dark">
+                  <Card.Header as="h5">5. Declaration</Card.Header>
+                  <Card.Body>
+                    <p>
+                      I, <strong>{fullName}</strong>, confirm that the
+                      information provided is accurate and agree to the
+                      financing terms subject to final approval.
+                    </p>
+                    <Row>
+                      <Col md={6}>
+                        <p className="fw-bold">Borrower</p>
+                        <div
+                          className="border-bottom mb-2"
+                          style={{ height: "60px" }}
+                        ></div>
+                        <p>Name: {fullName}</p>
+                      </Col>
+                      <Col md={6}>
+                        <p className="fw-bold">Financier</p>
+                        <div
+                          className="border-bottom mb-2"
+                          style={{ height: "60px" }}
+                        ></div>
+                        <p>Representative Name: ____________________</p>
+                      </Col>
+                    </Row>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+          </Container>
+        </div>
+
+        <div className="px-3 py-2 bg-white">
+          <label className="form-label">Comment</label>
           <textarea
-            id="comments"
             className="form-control"
-            rows={3}
-            placeholder="Add any remarks about the contract..."
-            value={formData.comments}
-            onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
-          />
+            rows={4}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Add any remarks or explanation"
+          ></textarea>
+        </div>
+
+        <div className="d-flex justify-content-end gap-2 p-3 bg-white">
+          <button type="button" className="btn btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            onClick={handleStatuesSubmission}
+          >
+            {isSubmitting ? "Submitting..." : "Submit"}
+          </button>
         </div>
       </div>
     </div>

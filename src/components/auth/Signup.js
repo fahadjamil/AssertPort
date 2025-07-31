@@ -30,42 +30,40 @@ export default function SignupPage() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (formData.password !== formData.confirmPassword) {
-    // const modal = new window.bootstrap.Modal(modalRef.current);
-    // modal.show();
-    return;
-  }
-
-  const { confirmPassword, ...payload } = formData;
-  console.log("Signup Data:", payload);
-
-  try {
-    const response = await fetch("https://credit-port-backend.vercel.app/v1/admin/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error("Signup failed");
+    if (formData.password !== formData.confirmPassword) {
+      // const modal = new window.bootstrap.Modal(modalRef.current);
+      // modal.show();
+      return;
     }
 
-    const data = await response.json();
-    console.log("Signup success:", data);
+    const { confirmPassword, ...payload } = formData;
+    console.log("Signup Data:", payload);
+    const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
+    try {
+      const response = await fetch(`${baseURL}/admin/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    // localStorage.setItem("authToken", data.token || "fake-jwt-token");
-    navigate("/");
+      if (!response.ok) {
+        throw new Error("Signup failed");
+      }
 
-  } catch (error) {
-    console.error("Error during signup:", error);
-    alert("Signup failed: " + error.message);
-  }
-};
+      const data = await response.json();
+      console.log("Signup success:", data);
 
+      // localStorage.setItem("authToken", data.token || "fake-jwt-token");
+      navigate("/");
+    } catch (error) {
+      console.error("Error during signup:", error);
+      alert("Signup failed: " + error.message);
+    }
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -76,18 +74,27 @@ export default function SignupPage() {
       <div className="container d-flex flex-column justify-content-center align-items-center min-vh-100 bg-light px-3">
         <div className="text-center mb-4">
           <h1 className="display-5 fw-bold text-primary">🚗 Car Refinance</h1>
-          <p className="text-secondary">Create your admin account to get started.</p>
+          <p className="text-secondary">
+            Create your admin account to get started.
+          </p>
         </div>
 
-        <div className="card shadow rounded-4 p-4 w-100" style={{ maxWidth: "750px" }}>
+        <div
+          className="card shadow rounded-4 p-4 w-100"
+          style={{ maxWidth: "750px" }}
+        >
           <div className="card-body">
             <h3 className="card-title text-center mb-4 fw-semibold">Sign Up</h3>
             <form onSubmit={handleSubmit} className="row">
               {/* Name */}
               <div className="col-md-6">
-                <label htmlFor="name" className="form-label">Full Name</label>
+                <label htmlFor="name" className="form-label">
+                  Full Name
+                </label>
                 <div className="input-group">
-                  <span className="input-group-text"><i className="bi bi-person-fill"></i></span>
+                  <span className="input-group-text">
+                    <i className="bi bi-person-fill"></i>
+                  </span>
                   <input
                     type="text"
                     id="name"
@@ -103,9 +110,13 @@ export default function SignupPage() {
 
               {/* Email */}
               <div className="col-md-6">
-                <label htmlFor="email" className="form-label">Email Address</label>
+                <label htmlFor="email" className="form-label">
+                  Email Address
+                </label>
                 <div className="input-group">
-                  <span className="input-group-text"><i className="bi bi-envelope-fill"></i></span>
+                  <span className="input-group-text">
+                    <i className="bi bi-envelope-fill"></i>
+                  </span>
                   <input
                     type="email"
                     id="email"
@@ -121,9 +132,13 @@ export default function SignupPage() {
 
               {/* Password */}
               <div className="col-md-6">
-                <label htmlFor="password" className="form-label">Password</label>
+                <label htmlFor="password" className="form-label">
+                  Password
+                </label>
                 <div className="input-group">
-                  <span className="input-group-text"><i className="bi bi-lock-fill"></i></span>
+                  <span className="input-group-text">
+                    <i className="bi bi-lock-fill"></i>
+                  </span>
                   <input
                     type={showPassword ? "text" : "password"}
                     id="password"
@@ -140,35 +155,49 @@ export default function SignupPage() {
                     onClick={togglePasswordVisibility}
                     tabIndex={-1}
                   >
-                    <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
+                    <i
+                      className={`bi ${
+                        showPassword ? "bi-eye-slash" : "bi-eye"
+                      }`}
+                    ></i>
                   </button>
                 </div>
               </div>
 
               {/* Confirm Password */}
               <div className="col-md-6">
-                <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+                <label htmlFor="confirmPassword" className="form-label">
+                  Confirm Password
+                </label>
                 <div className="input-group">
-                  <span className="input-group-text"><i className="bi bi-lock-fill"></i></span>
+                  <span className="input-group-text">
+                    <i className="bi bi-lock-fill"></i>
+                  </span>
                   <input
                     type={showPassword ? "text" : "password"}
                     id="confirmPassword"
                     name="confirmPassword"
-                    className={`form-control ${!passwordsMatch ? "is-invalid" : ""}`}
+                    className={`form-control ${
+                      !passwordsMatch ? "is-invalid" : ""
+                    }`}
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Enter a secure password"
                     required
                   />
                   {!passwordsMatch && (
-                    <div className="invalid-feedback">Passwords do not match.</div>
+                    <div className="invalid-feedback">
+                      Passwords do not match.
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Role Dropdown */}
               <div className="col-md-6">
-                <label htmlFor="role" className="form-label">Role</label>
+                <label htmlFor="role" className="form-label">
+                  Role
+                </label>
                 <select
                   id="role"
                   name="role"
@@ -185,7 +214,10 @@ export default function SignupPage() {
 
               {/* Submit Button */}
               <div className="d-grid mt-3">
-                <button type="submit" className="btn btn-success btn-lg shadow-sm">
+                <button
+                  type="submit"
+                  className="btn btn-success btn-lg shadow-sm"
+                >
                   <i className="bi bi-person-plus-fill me-2"></i>Sign Up
                 </button>
               </div>
@@ -195,7 +227,9 @@ export default function SignupPage() {
             <div className="text-center mt-3">
               <p className="text-muted small mb-0">
                 Already have an account?{" "}
-                <a href="/" className="text-primary text-decoration-none">Login here</a>
+                <a href="/" className="text-primary text-decoration-none">
+                  Login here
+                </a>
               </p>
             </div>
           </div>
@@ -203,18 +237,38 @@ export default function SignupPage() {
       </div>
 
       {/* Password Mismatch Modal */}
-      <div className="modal fade" id="passwordMismatchModal" ref={modalRef} tabIndex="-1" aria-labelledby="passwordMismatchLabel" aria-hidden="true">
+      <div
+        className="modal fade"
+        id="passwordMismatchModal"
+        ref={modalRef}
+        tabIndex="-1"
+        aria-labelledby="passwordMismatchLabel"
+        aria-hidden="true"
+      >
         <div className="modal-dialog">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title" id="passwordMismatchLabel">Password Mismatch</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <h5 className="modal-title" id="passwordMismatchLabel">
+                Password Mismatch
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
             </div>
             <div className="modal-body">
               Password and Confirm Password do not match. Please try again.
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

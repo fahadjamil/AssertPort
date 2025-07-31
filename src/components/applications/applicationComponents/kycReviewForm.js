@@ -3,6 +3,8 @@ import { nadraService } from "../../../services/nadra-service";
 import { formatCNIC } from "../../../utils/formatters";
 import { IdDocumentsSection } from "./idDocumentsSection";
 import axios from "axios";
+import { Alert, Button } from "react-bootstrap";
+import Popup from "../../shared/Popup";
 import {
   BsCheckCircle,
   BsClock,
@@ -10,7 +12,17 @@ import {
   BsXCircle,
 } from "react-icons/bs";
 
-const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
+const KycReviewForm = ({
+  application,
+  setActiveTab,
+  setApplication,
+  refreshApplication,
+}) => {
+  const [popup, setPopup] = useState({
+    type: "",
+    message: "",
+    show: false,
+  });
   let [formData, setFormData] = useState({
     id: application?.id,
     cnic: formatCNIC(application?.user?.cnic_number ?? ""),
@@ -70,8 +82,7 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [activeVerificationTab, setActiveVerificationTab] = useState("cnic");
   const [isStatusLoading, setIsLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
+  const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
 
   useEffect(() => {
     loadVerificationHistory();
@@ -88,17 +99,6 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
     }
   };
 
-  const getMatchConfidenceBadge = (confidence) => {
-    if (confidence >= 90) {
-      return <span className="badge bg-success">{confidence}% Match</span>;
-    } else if (confidence >= 70) {
-      return (
-        <span className="badge bg-warning text-dark">{confidence}% Match</span>
-      );
-    } else {
-      return <span className="badge bg-danger">{confidence}% Match</span>;
-    }
-  };
   const renderVerificationDetails = () => {
     if (!verificationResult || !verificationResult.details) return null;
 
@@ -199,139 +199,310 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
       </div>
     );
   };
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "verified":
-        return (
-          <span className="badge bg-success text-white d-inline-flex align-items-center">
-            <BsCheckCircle className="me-1" size={14} /> Verified
-          </span>
-        );
-      case "pending":
-        return (
-          <span className="badge bg-warning text-dark d-inline-flex align-items-center">
-            <BsClock className="me-1" size={14} /> Pending
-          </span>
-        );
-      case "failed":
-        return (
-          <span className="badge bg-danger text-white d-inline-flex align-items-center">
-            <BsExclamationCircle className="me-1" size={14} /> Failed
-          </span>
-        );
-      default:
-        return <span className="badge bg-secondary text-white">Unknown</span>;
-    }
-  };
-  const renderVerificationHistory = () => {
-    if (isLoadingHistory) {
-      return (
-        <div className="d-flex justify-content-center align-items-center p-4">
-          <div className="spinner-border spinner-border-sm me-2"></div>
-          <span>Loading verification history...</span>
-        </div>
-      );
-    }
+  // const getStatusBadge = (status) => {
+  //   switch (status) {
+  //     case "verified":
+  //       return (
+  //         <span className="badge bg-success text-white d-inline-flex align-items-center">
+  //           <BsCheckCircle className="me-1" size={14} /> Verified
+  //         </span>
+  //       );
+  //     case "pending":
+  //       return (
+  //         <span className="badge bg-warning text-dark d-inline-flex align-items-center">
+  //           <BsClock className="me-1" size={14} /> Pending
+  //         </span>
+  //       );
+  //     case "failed":
+  //       return (
+  //         <span className="badge bg-danger text-white d-inline-flex align-items-center">
+  //           <BsExclamationCircle className="me-1" size={14} /> Failed
+  //         </span>
+  //       );
+  //     default:
+  //       return <span className="badge bg-secondary text-white">Unknown</span>;
+  //   }
+  // };
+  // const handleVerifyNadra = async () => {
+  //   setIsVerifying(true);
+  //   setVerificationError(null);
 
-    if (!verificationHistory.length) {
-      return (
-        <div className="text-center text-muted py-4">
-          No verification history found for this CNIC.
-        </div>
-      );
-    }
+  //   try {
+  //     const endpoint = `${baseURL}/application/update/status`;
 
-    return (
-      <table className="table table-bordered mt-3">
-        <thead className="table-light">
-          <tr>
-            <th>Date & Time</th>
-            <th>Request ID</th>
-            <th>Method</th>
-            <th>Admin</th>
-            <th>Result</th>
-            <th>Match %</th>
-          </tr>
-        </thead>
-        <tbody>
-          {verificationHistory.map((log) => (
-            <tr key={log.requestId}>
-              <td>{new Date(log.timestamp).toLocaleString()}</td>
-              <td className="font-monospace text-break">{log.requestId}</td>
-              <td>
-                {log.verificationMethod === "cnic"
-                  ? "CNIC Verification"
-                  : "Biometric"}
-              </td>
-              <td>{log.adminName}</td>
-              <td>
-                {log.verified ? (
-                  <span className="badge bg-success text-white d-inline-flex align-items-center">
-                    <BsCheckCircle className="me-1" size={14} /> Verified
-                  </span>
-                ) : (
-                  <span className="badge bg-danger text-white d-inline-flex align-items-center">
-                    <BsXCircle className="me-1" size={14} /> Failed
-                  </span>
-                )}
-              </td>
-              <td>{log.matchPercentage}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  };
-  const handleVerifyNadra = async () => {
-    setIsVerifying(true);
-    setVerificationError(null);
+  //     const response = await axios.put(endpoint, {
+  //       id: formData.id,
+  //       notes: formData.comments,
+  //       nadraVerificationStatus: "verified",
+  //       statusKey: application?.currentStatus?.key,
+  //     });
 
-    try {
-      const endpoint =
-        "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status";
+  //     const isVerified = response.status === 200;
 
-      const response = await axios.put(endpoint, {
-        id: formData.id,
-        notes: formData.comments,
-        nadraVerificationStatus: "verified",
-        statusKey: application?.currentStatus?.key,
-      });
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       verificationStatus: isVerified ? "verified" : "failed",
+  //     }));
 
-      const isVerified = response.status === 200;
-
-      setFormData((prev) => ({
-        ...prev,
-        verificationStatus: isVerified ? "verified" : "failed",
-      }));
-
-      if (isVerified) {
-        // loadVerificationHistory();
-      }
-    } catch (error) {
-      console.error("NADRA verification error:", error);
-      setFormData((prev) => ({
-        ...prev,
-        verificationStatus: "failed",
-      }));
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+  //     if (isVerified) {
+  //       // loadVerificationHistory();
+  //     }
+  //   } catch (error) {
+  //     console.error("NADRA verification error:", error);
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       verificationStatus: "failed",
+  //     }));
+  //   } finally {
+  //     setIsVerifying(false);
+  //   }
+  // };
   const handleCommentChange = (e) => {
     setFormData({
       ...formData,
       comments: e.target.value,
     });
   };
+  const getAccountNumberFromIban = (iban) => {
+    if (!iban || typeof iban !== "string") return "";
+    const trimmedIban = iban.replace(/\s+/g, "").toUpperCase();
+
+    // For Pakistani IBANs (24 characters, account number starts at position 9)
+    if (trimmedIban.startsWith("PK") && trimmedIban.length === 24) {
+      return trimmedIban.slice(8); // Extract from 9th character onward
+    }
+
+    // Add support for other countries if needed
+    return "";
+  };
   const handleStatuesSubmission = async () => {
-    if (!formData.comments.trim()) return; // prevent empty submissions
+    const missingFields = [];
+    console.log(application);
+    const cbfsData1 = {
+      personalDetails: {
+        name: `${application.user?.firstName || ""} ${
+          application.user?.lastName || ""
+        }`.trim(),
+        contactNumber: `${formData.referencePhoneNumber?.countryCode || ""}${
+          formData.referencePhoneNumber?.phone || ""
+        }`,
+        email: application.user?.email || "",
+        dob: application.dob || "",
+        nationalDocumentId: application.user?.cnic_number || "",
+        complianceDetails: [
+          {
+            requirementName: "cnic_front",
+            values: [application?.cnic_front[0]?.url ?? []],
+          },
+
+          {
+            requirementName: "cnic_back",
+            values: [application?.cnic_back[0]?.url ?? []],
+          },
+
+          {
+            requirementName: "selfie",
+            values: [application?.photo[0]?.url ?? []],
+          },
+        ],
+      },
+
+      // Hardcoded Business Details
+      businessDetails: {
+        businessName: "Doe Enterprises",
+        businessType: "sole_proprietorship",
+        businessAddress: {
+          streetAddress: "123 Business Street",
+          city: "Karachi",
+          state: "Sindh",
+          country: "Pakistan",
+          coordinates: {
+            lat: 24.8607,
+            long: 67.0011,
+          },
+        },
+        nationalDocumentId: "33106-8510840-1",
+        complianceDetails: [
+          {
+            requirementName: "business_poc",
+            values: ["John Doe"],
+          },
+          {
+            requirementName: "industry",
+            values: ["E-commerce & Online Retail"],
+          },
+          {
+            requirementName: "currency_requirement",
+            values: ["5000"],
+          },
+          {
+            requirementName: "proprietorship_declaration",
+            values: [
+              "https://your-bucket.s3.amazonaws.com/documents/prop_declaration_123.pdf",
+            ],
+          },
+          {
+            requirementName: "ntn_certificate",
+            values: [
+              "https://your-bucket.s3.amazonaws.com/documents/ntn_cert_123.pdf",
+            ],
+          },
+          {
+            requirementName: "form_ab",
+            values: [
+              "https://your-bucket.s3.amazonaws.com/documents/form_ab_1.pdf",
+              "https://your-bucket.s3.amazonaws.com/documents/form_ab_2.pdf",
+            ],
+          },
+        ],
+      },
+
+      bankDetails: {
+        bankId: application.user_bank_detail?.bankId || "",
+        accountTitle: application.user_bank_detail?.accountTitle || "",
+        accountNumber: getAccountNumberFromIban(
+          application.user_bank_detail?.iban
+        ),
+        iban: application.user_bank_detail?.iban || "",
+      },
+
+      optional: {
+        externalUserId: "EXT1234",
+        otherBusinessOwners: [],
+      },
+    };
+    console.log("Dataset for CBFS");
+    console.log(cbfsData1);
+
+    if (!application.user?.firstName) missingFields.push("User Name");
+    if (!application.user?.phone) missingFields.push("User Phone");
+    if (!application.user?.email) missingFields.push("User Email");
+    if (!application.dob) missingFields.push("Date of Birth");
+    if (!application.user?.cnic_number) missingFields.push("CNIC Number");
+    if (!application.cnic_front) missingFields.push("CNIC Front Image");
+    if (!application.cnic_back) missingFields.push("CNIC Back Image");
+    if (!application.photo || application.photo.length === 0) {
+      missingFields.push("User Photo");
+    }
+    if (!application.user_bank_detail?.bankId)
+      missingFields.push("Bank Name / ID");
+    if (!application.user_bank_detail?.accountTitle)
+      missingFields.push("Account Title");
+    if (!application.user_bank_detail?.iban) missingFields.push("IBAN");
+    if (!formData.comments.trim()) missingFields.push("Comments");
+
+    if (missingFields.length > 0) {
+      setPopup({
+        type: "error",
+        message:
+          "<strong>The following required fields are missing:</strong><br/>" +
+          missingFields.map((field) => `• ${field}`).join("<br/>"),
+        show: true,
+      });
+      return;
+    }
 
     console.log("Here");
     setIsLoading(true);
+    const cbfsData = {
+      personalDetails: {
+        name: `${application.user?.firstName || ""} ${
+          application.user?.lastName || ""
+        }`.trim(),
+        contactNumber: application.user?.phone || "",
+        email: application.user?.email || "",
+        dob: application.dob || "",
+        nationalDocumentId: application.user?.cnic_number || "",
+        complianceDetails: [
+          ...(application.cnic_front
+            ? [
+                {
+                  requirementName: "cnic_front",
+                  values: [application.cnic_front],
+                },
+              ]
+            : []),
+          ...(application.cnic_back
+            ? [
+                {
+                  requirementName: "cnic_back",
+                  values: [application.cnic_back],
+                },
+              ]
+            : []),
+          ...(application.photo && application.photo.length > 0
+            ? [{ requirementName: "selfie", values: [application.photo] }]
+            : []),
+        ],
+      },
+
+      // Hardcoded Business Details
+      businessDetails: {
+        businessName: "Doe Enterprises",
+        businessType: "sole_proprietorship",
+        businessAddress: {
+          streetAddress: "123 Business Street",
+          city: "Karachi",
+          state: "Sindh",
+          country: "Pakistan",
+          coordinates: {
+            lat: 24.8607,
+            long: 67.0011,
+          },
+        },
+        nationalDocumentId: "33106-8510840-1",
+        complianceDetails: [
+          {
+            requirementName: "business_poc",
+            values: ["John Doe"],
+          },
+          {
+            requirementName: "industry",
+            values: ["E-commerce & Online Retail"],
+          },
+          {
+            requirementName: "currency_requirement",
+            values: ["5000"],
+          },
+          {
+            requirementName: "proprietorship_declaration",
+            values: [
+              "https://your-bucket.s3.amazonaws.com/documents/prop_declaration_123.pdf",
+            ],
+          },
+          {
+            requirementName: "ntn_certificate",
+            values: [
+              "https://your-bucket.s3.amazonaws.com/documents/ntn_cert_123.pdf",
+            ],
+          },
+          {
+            requirementName: "form_ab",
+            values: [
+              "https://your-bucket.s3.amazonaws.com/documents/form_ab_1.pdf",
+              "https://your-bucket.s3.amazonaws.com/documents/form_ab_2.pdf",
+            ],
+          },
+        ],
+      },
+
+      bankDetails: {
+        bankId: application.user_bank_detail?.bankId || "",
+        accountTitle: application.user_bank_detail?.accountTitle || "",
+        accountNumber: getAccountNumberFromIban(
+          application.user_bank_detail?.iban
+        ),
+        iban: application.user_bank_detail?.iban || "",
+      },
+
+      optional: {
+        externalUserId: "EXT1234",
+        otherBusinessOwners: [],
+      },
+    };
 
     try {
-      const endpoint =
-        "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status";
+      const endpoint = `${baseURL}/application/update/status`;
       const response = await axios.put(endpoint, {
         id: formData.id,
         notes: formData.comments,
@@ -339,12 +510,29 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
         statusKey: "car_verification",
       });
 
-      setApplication("verified");
-      activeTabRef.current = "car";
-      setActiveTab("car");
+      setPopup({
+        type: "success",
+        message: response.data?.message || "Status updated successfully.",
+        show: true,
+      });
+      await refreshApplication();
+      // Wait 1.5 seconds before switching tab
+      setTimeout(() => {
+        setApplication("verified");
+        activeTabRef.current = "car";
+        setActiveTab("car");
+      }, 1500); // adjust delay if needed
     } catch (error) {
       console.error(error);
-      setShowError(true);
+
+      const errorMessage =
+        error?.response?.data?.message || error.message || "An error occurred.";
+
+      setPopup({
+        type: "error",
+        message: errorMessage,
+        show: true,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -352,24 +540,13 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
 
   return (
     <div className="mb-4">
-      {/* {showSuccess && (
-        <div className="alert alert-success" role="alert">
-          This is a success alert with{" "}
-          <a href="#" className="alert-link">
-            an example link
-          </a>
-          . Give it a click if you like.
-        </div>
-      )}
-      {showError && (
-        <div className="alert alert-danger" role="alert">
-          This is a danger alert with{" "}
-          <a href="#" className="alert-link">
-            an example link
-          </a>
-          . Give it a click if you like.
-        </div>
-      )} */}
+      <Popup
+        type={popup.type}
+        message={popup.message}
+        show={popup.show}
+        onClose={() => setPopup({ ...popup, show: false })}
+        duration={5000}
+      />
       <div className="card">
         <div className="card-header">
           <div className="d-flex align-items-center gap-2">
@@ -721,10 +898,10 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                 />
               </div>
             )}
-            <div className="d-flex justify-content-between align-items-center my-4">
+            {/* <div className="d-flex justify-content-between align-items-center my-4">
               <label className="form-label mb-0">NADRA Verification</label>
               {getStatusBadge(formData.verificationStatus ?? "pending")}
-            </div>
+            </div> */}
           </div>
 
           <hr />
@@ -737,11 +914,12 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                 url: application?.cnic_front[0]?.url || "",
               },
               { label: "CNIC Back", url: application?.cnic_back[0]?.url || "" },
+              { label: "Selfie", url: application?.photo[0]?.url || "" },
             ]}
           />
 
           <hr />
-          <div className="col-md-6">
+          {/* <div className="col-md-6">
             <div className="card shadow-sm border-0 mt-4">
               <div className="card-header bg-primary text-white d-flex align-items-center">
                 <i className="bi bi-shield-check me-2 fs-5"></i>
@@ -795,7 +973,7 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
                 </button>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {verificationError && (
             <div className="alert alert-danger">{verificationError}</div>
@@ -818,9 +996,9 @@ const KycReviewForm = ({ application, setActiveTab, setApplication }) => {
           <button className="btn btn-secondary">Cancel</button>
           <button
             onClick={handleStatuesSubmission}
-            disabled={
-              isStatusLoading || formData.verificationStatus === "pending"
-            }
+            // disabled={
+            //   isStatusLoading || formData.verificationStatus === "pending"
+            // }
             className="btn btn-success"
           >
             {isStatusLoading ? "Saving..." : "Save & Continue"}

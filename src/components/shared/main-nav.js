@@ -59,6 +59,18 @@ const MainNav = () => {
               </NavLink>
             </li>
             <li className="nav-item">
+              <NavLink to="/calender-events" className="nav-link">
+                <i className="bi bi-calendar-event me-2"></i>{" "}
+                {!collapsed && "Calender Events"}
+              </NavLink>
+            </li>
+            <li className="nav-item">
+              <NavLink to="/notifications" className="nav-link">
+                <i className="bi bi-bell me-2"></i>{" "}
+                {!collapsed && "Notifications"}
+              </NavLink>
+            </li>
+            <li className="nav-item">
               <NavLink to="/vehicles" className="nav-link">
                 <i className="bi bi-truck-front me-2"></i>{" "}
                 {!collapsed && "Vehicles"}

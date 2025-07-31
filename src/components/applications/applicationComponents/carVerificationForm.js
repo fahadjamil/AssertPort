@@ -3,8 +3,9 @@ import axios from "axios";
 import { IdDocumentsSection } from "./idDocumentsSection";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import Popup from "../../shared/Popup";
 
-const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
+const CarVerificationForm = ({ application, setActiveTab, setApplication,refreshApplication }) => {
   const [formData, setFormData] = useState({
     id: application?.id ?? "",
     make: application?.Asset?.make?.name ?? "",
@@ -32,26 +33,54 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState([]);
   const fileInputRef = useRef();
+  const [popup, setPopup] = useState({
+    type: "",
+    message: "",
+    show: false,
+  });
+  const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
 
-  const handleStatusSubmission = async () => {
-    if (!formData.comments.trim()) return;
-    setIsLoading(true);
-    try {
-      const endpoint =
-        "https://credit-port-backend.vercel.app/v1/salaried/individual/update/status";
+const handleStatusSubmission = async () => {
+  if (!formData.comments.trim()) return;
 
-      await axios.put(endpoint, {
-        id: formData.id,
-        notes: formData.comments,
-        statusKey: "inspection",
-      });
+  setIsLoading(true);
+
+  try {
+    const endpoint = `${baseURL}/application/update/status`;
+
+    const response = await axios.put(endpoint, {
+      id: formData.id,
+      notes: formData.comments,
+      statusKey: "inspection",
+    });
+
+    setPopup({
+      type: "success",
+      message: response.data?.message || "Status updated successfully.",
+      show: true,
+    });
+    await refreshApplication();
+
+    // Optional: delay before moving to next tab
+    setTimeout(() => {
       setActiveTab("inspection");
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    }, 1500);
+  } catch (error) {
+    console.error(error);
+
+    const errorMessage =
+      error?.response?.data?.message || error.message || "An error occurred.";
+
+    setPopup({
+      type: "error",
+      message: errorMessage,
+      show: true,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const toggleSelectedDoc = (value) => {
     setSelectedDocs((prev) =>
@@ -80,8 +109,7 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
       form.append("carVerificationPhoto", previewFile);
       console.log("form" + formData);
 
-      const endpoint =
-        "https://credit-port-backend.vercel.app/v1/salaried/individual/update-vehicle-verfication-photo";
+      const endpoint = `${baseURL}/application/update-vehicle-verfication-photo`;
 
       console.log("endpoint" + endpoint);
 
@@ -131,8 +159,7 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
       console.log(pair[0] + ":", pair[1]);
     }
 
-    const endpoint =
-      "https://credit-port-backend.vercel.app/v1/salaried/individual/update-document";
+    const endpoint = `${baseURL}/application/update-document`;
 
     try {
       const res = await axios.post(endpoint, form, {
@@ -160,6 +187,13 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication }) => {
 
   return (
     <div className="container-fluid py-4">
+      <Popup
+        type={popup.type}
+        message={popup.message}
+        show={popup.show}
+        onClose={() => setPopup({ ...popup, show: false })}
+        duration={5000}
+      />
       {/* Preview Modal */}
       {showPreview && previewFile && (
         <div
