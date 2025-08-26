@@ -5,6 +5,7 @@ import { IdDocumentsSection } from "./idDocumentsSection";
 import axios from "axios";
 import { Alert, Button } from "react-bootstrap";
 import Popup from "../../shared/Popup";
+import LoadingSpinner from "../../shared/LoadingSpinner";
 import {
   BsCheckCircle,
   BsClock,
@@ -25,7 +26,7 @@ const KycReviewForm = ({
   });
   let [formData, setFormData] = useState({
     id: application?.id,
-    cnic: formatCNIC(application?.user?.cnic_number ?? ""),
+    cnic: formatCNIC(application?.cnic ?? ""),
     fullName: application?.name ?? "",
     address: application?.currentAddress ?? "",
     ntn: application?.ntn ?? "",
@@ -82,6 +83,10 @@ const KycReviewForm = ({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [activeVerificationTab, setActiveVerificationTab] = useState("cnic");
   const [isStatusLoading, setIsLoading] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
 
   useEffect(() => {
@@ -199,70 +204,7 @@ const KycReviewForm = ({
       </div>
     );
   };
-  // const getStatusBadge = (status) => {
-  //   switch (status) {
-  //     case "verified":
-  //       return (
-  //         <span className="badge bg-success text-white d-inline-flex align-items-center">
-  //           <BsCheckCircle className="me-1" size={14} /> Verified
-  //         </span>
-  //       );
-  //     case "pending":
-  //       return (
-  //         <span className="badge bg-warning text-dark d-inline-flex align-items-center">
-  //           <BsClock className="me-1" size={14} /> Pending
-  //         </span>
-  //       );
-  //     case "failed":
-  //       return (
-  //         <span className="badge bg-danger text-white d-inline-flex align-items-center">
-  //           <BsExclamationCircle className="me-1" size={14} /> Failed
-  //         </span>
-  //       );
-  //     default:
-  //       return <span className="badge bg-secondary text-white">Unknown</span>;
-  //   }
-  // };
-  // const handleVerifyNadra = async () => {
-  //   setIsVerifying(true);
-  //   setVerificationError(null);
 
-  //   try {
-  //     const endpoint = `${baseURL}/application/update/status`;
-
-  //     const response = await axios.put(endpoint, {
-  //       id: formData.id,
-  //       notes: formData.comments,
-  //       nadraVerificationStatus: "verified",
-  //       statusKey: application?.currentStatus?.key,
-  //     });
-
-  //     const isVerified = response.status === 200;
-
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       verificationStatus: isVerified ? "verified" : "failed",
-  //     }));
-
-  //     if (isVerified) {
-  //       // loadVerificationHistory();
-  //     }
-  //   } catch (error) {
-  //     console.error("NADRA verification error:", error);
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       verificationStatus: "failed",
-  //     }));
-  //   } finally {
-  //     setIsVerifying(false);
-  //   }
-  // };
-  const handleCommentChange = (e) => {
-    setFormData({
-      ...formData,
-      comments: e.target.value,
-    });
-  };
   const getAccountNumberFromIban = (iban) => {
     if (!iban || typeof iban !== "string") return "";
     const trimmedIban = iban.replace(/\s+/g, "").toUpperCase();
@@ -276,6 +218,7 @@ const KycReviewForm = ({
     return "";
   };
   const handleStatuesSubmission = async () => {
+    setLoading(true);
     const missingFields = [];
     console.log(application);
     const cbfsData1 = {
@@ -378,7 +321,7 @@ const KycReviewForm = ({
     if (!application.user?.phone) missingFields.push("User Phone");
     if (!application.user?.email) missingFields.push("User Email");
     if (!application.dob) missingFields.push("Date of Birth");
-    if (!application.user?.cnic_number) missingFields.push("CNIC Number");
+    if (!application.cnic) missingFields.push("CNIC Number");
     if (!application.cnic_front) missingFields.push("CNIC Front Image");
     if (!application.cnic_back) missingFields.push("CNIC Back Image");
     if (!application.photo || application.photo.length === 0) {
@@ -389,7 +332,7 @@ const KycReviewForm = ({
     if (!application.user_bank_detail?.accountTitle)
       missingFields.push("Account Title");
     if (!application.user_bank_detail?.iban) missingFields.push("IBAN");
-    if (!formData.comments.trim()) missingFields.push("Comments");
+    // if (!formData.comments.trim()) missingFields.push("Comments");
 
     if (missingFields.length > 0) {
       setPopup({
@@ -399,11 +342,10 @@ const KycReviewForm = ({
           missingFields.map((field) => `• ${field}`).join("<br/>"),
         show: true,
       });
+      setLoading(false);
       return;
     }
 
-    console.log("Here");
-    setIsLoading(true);
     const cbfsData = {
       personalDetails: {
         name: `${application.user?.firstName || ""} ${
@@ -502,12 +444,12 @@ const KycReviewForm = ({
     };
 
     try {
-      const endpoint = `${baseURL}/application/update/status`;
+      const endpoint = `${baseURL}/application/update/statuses`;
       const response = await axios.put(endpoint, {
         id: formData.id,
-        notes: formData.comments,
-        nadraVerificationStatus: "verified",
-        statusKey: "car_verification",
+        underReviewProcess: {
+          nadraVerificationStatus: "Approved", //2nd step
+        },
       });
 
       setPopup({
@@ -515,6 +457,7 @@ const KycReviewForm = ({
         message: response.data?.message || "Status updated successfully.",
         show: true,
       });
+      setLoading(false);
       await refreshApplication();
       // Wait 1.5 seconds before switching tab
       setTimeout(() => {
@@ -527,7 +470,7 @@ const KycReviewForm = ({
 
       const errorMessage =
         error?.response?.data?.message || error.message || "An error occurred.";
-
+      setLoading(false);
       setPopup({
         type: "error",
         message: errorMessage,
@@ -537,9 +480,111 @@ const KycReviewForm = ({
       setIsLoading(false);
     }
   };
+  const handleReject = () => {
+    setRejectReason("");
+    setShowRejectModal(true);
+  };
 
+  const handleConfirmReject = async () => {
+    if (!rejectReason.trim()) {
+      setPopup({
+        type: "error",
+        message: "Please provide a reason for rejection.",
+        show: true,
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseURL}/application/update/statuses`,
+        {
+          id: formData.id,
+          rejection: {
+            rejectionReason: rejectReason,
+          },
+        }
+      );
+
+      setPopup({
+        type: "success",
+        message: response.data?.message || "Application rejected successfully.",
+        show: true,
+      });
+      setShowRejectModal(false);
+      await refreshApplication();
+      setTimeout(() => {
+        setApplication("rejected");
+        // activeTabRef.current = "car";
+        // setActiveTab("car");
+      }, 1500);
+    } catch (error) {
+      setPopup({
+        type: "error",
+        message: error?.response?.data?.message || "Rejection failed.",
+        show: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center mt-5">
+        <LoadingSpinner small overlay />
+      </div>
+    );
+  }
   return (
     <div className="mb-4">
+      {showRejectModal && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex="-1"
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title text-danger">
+                  <i className="bi bi-x-circle-fill me-2" /> Reject Application
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowRejectModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <label className="form-label">Reason for Rejection</label>
+                <textarea
+                  className="form-control"
+                  rows="4"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejection..."
+                ></textarea>
+              </div>
+              <div className="modal-footer">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleConfirmReject}
+                  disabled={isStatusLoading}
+                >
+                  {isStatusLoading ? "Rejecting..." : "Confirm Reject"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <Popup
         type={popup.type}
         message={popup.message}
@@ -587,135 +632,11 @@ const KycReviewForm = ({
                 readOnly
               />
             </div>
-            {formData.formType === "Salaried" && (
-              <>
-                <h6 className="fw-bold text-primary border-start border-4 ps-3 my-4 d-flex align-items-center">
-                  <i className="bi bi-briefcase me-2 text-secondary"></i>
-                  Employment Information
-                </h6>
-                <div className="col-md-3">
-                  <label className="form-label">Designation</label>
-                  <input
-                    className="form-control"
-                    value={formData.designation}
-                    readOnly
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Employed Since</label>
-                  <input
-                    className="form-control"
-                    value={
-                      formData.employedSince
-                        ? new Intl.DateTimeFormat("en-US", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          }).format(new Date(formData.employedSince))
-                        : "-"
-                    }
-                    readOnly
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Employment Status</label>
-                  <input
-                    className="form-control"
-                    value={formData.employmentStatus}
-                    readOnly
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Gross Salary (PKR)</label>
-                  <input
-                    className="form-control"
-                    value={
-                      formData.grossSalary
-                        ? Number(formData.grossSalary).toLocaleString()
-                        : ""
-                    }
-                    readOnly
-                  />
-                </div>
-              </>
-            )}
-            {formData.formType === "Business" && (
-              <>
-                <h6 className="fw-bold text-primary border-start border-4 ps-3 my-4 d-flex align-items-center">
-                  <i className="bi bi-briefcase-fill me-2 text-secondary"></i>
-                  Business Information
-                </h6>
-                <div className="col-md-3">
-                  <label className="form-label">Business Since</label>
-                  <input
-                    className="form-control"
-                    value={
-                      formData.businessSince
-                        ? new Intl.DateTimeFormat("en-US", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          }).format(new Date(formData.businessSince))
-                        : "-"
-                    }
-                    readOnly
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Business Premise</label>
-                  <input
-                    className="form-control"
-                    value={formData.businessPremise}
-                    readOnly
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Nature Of Business</label>
-                  <input
-                    className="form-control"
-                    value={formData.natureOfBusiness}
-                    readOnly
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Net Take Home Income</label>
-                  <input
-                    className="form-control"
-                    value={formData.netTakeHomeIncome}
-                    readOnly
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label">Other Incomes</label>
-                  <input
-                    className="form-control"
-                    value={formData.otherIncome}
-                    readOnly
-                  />
-                </div>
-              </>
-            )}
             {/* Common Fields */}
             <h6 className="fw-bold text-primary border-start border-4 ps-3 my-4 d-flex align-items-center">
               <i className="bi bi-building me-2 text-secondary"></i>
-              Company & Loan Information
+              Loan Information
             </h6>
-            <div className="col-md-3">
-              <label className="form-label">Company Name</label>
-              <input
-                className="form-control"
-                value={formData.companyName}
-                readOnly
-              />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Company Address</label>
-              <input
-                className="form-control"
-                value={formData.companyAddress}
-                readOnly
-              />
-            </div>
             <div className="col-md-3">
               <label className="form-label">Purpose of Loan</label>
               <input
@@ -727,7 +648,7 @@ const KycReviewForm = ({
 
             {formData.formType === "Salaried" && (
               <>
-                <div className="col-md-3">
+                {/* <div className="col-md-3">
                   <label className="form-label">
                     Net Household Income (PKR)
                   </label>
@@ -740,7 +661,7 @@ const KycReviewForm = ({
                     }
                     readOnly
                   />
-                </div>
+                </div> */}
                 <div className="col-md-3">
                   <label className="form-label">Residential Status</label>
                   <input
@@ -834,38 +755,31 @@ const KycReviewForm = ({
                 readOnly
               />
             </div>
-            <div className="col-md-3">
-              <label className="form-label">Guardian Name</label>
-              <input
-                className="form-control"
-                value={formData.referenceGuardianName}
-                readOnly
-              />
-            </div>
-            <div className="col-md-3">
+
+            {/* <div className="col-md-3">
               <label className="form-label">Reference CNIC</label>
               <input
                 className="form-control"
                 value={formData.referenceCnic}
                 readOnly
               />
-            </div>
-            <div className="col-md-3">
+            </div> */}
+            {/* <div className="col-md-3">
               <label className="form-label">Relationship With Reference</label>
               <input
                 className="form-control"
                 value={formData.referenceRelationshipWithApplicant}
                 readOnly
               />
-            </div>
-            <div className="col-md-3">
+            </div> */}
+            {/* <div className="col-md-3">
               <label className="form-label">Reference Address</label>
               <input
                 className="form-control"
                 value={formData.referenceAddress}
                 readOnly
               />
-            </div>
+            </div> */}
             <div className="col-md-3">
               <label className="form-label">Reference Phone Number</label>
               <input
@@ -876,14 +790,14 @@ const KycReviewForm = ({
                 readOnly
               />
             </div>
-            <div className="col-md-3">
+            {/* <div className="col-md-3">
               <label className="form-label">Has Credit Card</label>
               <input
                 className="form-control"
                 value={formData.hasCreditCard ? "Yes" : "No"}
                 readOnly
               />
-            </div>
+            </div> */}
             {formData.hasCreditCard && (
               <div className="col-md-3">
                 <label className="form-label">Credit Limit (PKR)</label>
@@ -898,10 +812,6 @@ const KycReviewForm = ({
                 />
               </div>
             )}
-            {/* <div className="d-flex justify-content-between align-items-center my-4">
-              <label className="form-label mb-0">NADRA Verification</label>
-              {getStatusBadge(formData.verificationStatus ?? "pending")}
-            </div> */}
           </div>
 
           <hr />
@@ -919,89 +829,26 @@ const KycReviewForm = ({
           />
 
           <hr />
-          {/* <div className="col-md-6">
-            <div className="card shadow-sm border-0 mt-4">
-              <div className="card-header bg-primary text-white d-flex align-items-center">
-                <i className="bi bi-shield-check me-2 fs-5"></i>
-                <h5 className="mb-0">NADRA Verification</h5>
-              </div>
-
-              <div className="card-body">
-                <div className="alert alert-info border-start border-4 border-primary shadow-sm">
-                  <h6 className="mb-1">
-                    <i className="bi bi-card-list me-2 text-primary"></i>
-                    CNIC Verification
-                  </h6>
-                  <p className="mb-0">
-                    Verify the applicant's identity by matching their CNIC
-                    details with the NADRA database.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleVerifyNadra}
-                  disabled={
-                    isVerifying || formData.verificationStatus === "verified"
-                  }
-                  className={`btn w-100 fw-semibold shadow-sm 
-        ${
-          formData.verificationStatus === "verified"
-            ? "btn-success"
-            : "btn-primary"
-        }`}
-                >
-                  {isVerifying ? (
-                    <>
-                      <span
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                        aria-hidden="true"
-                      ></span>
-                      Verifying with NADRA...
-                    </>
-                  ) : formData.verificationStatus === "verified" ? (
-                    <>
-                      <i className="bi bi-check-circle-fill me-2"></i>
-                      Verified with NADRA
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-shield-lock-fill me-2"></i>
-                      Verify with NADRA
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div> */}
 
           {verificationError && (
             <div className="alert alert-danger">{verificationError}</div>
           )}
 
           {renderVerificationDetails()}
-
-          <div className="mb-3">
-            <label className="form-label">Comments</label>
-            <textarea
-              className="form-control"
-              rows="4"
-              value={formData.comments}
-              onChange={handleCommentChange}
-              placeholder="Add your comments about the application verification..."
-            ></textarea>
-          </div>
         </div>
         <div className="card-footer d-flex justify-content-end gap-2">
-          <button className="btn btn-secondary">Cancel</button>
+          <Button variant="danger" onClick={handleReject}>
+            Reject
+          </Button>
           <button
             onClick={handleStatuesSubmission}
-            // disabled={
-            //   isStatusLoading || formData.verificationStatus === "pending"
-            // }
+            disabled={
+              application?.carRegistrationBook?.length === 0 ||
+              application?.bankStatement?.length === 0
+            }
             className="btn btn-success"
           >
-            {isStatusLoading ? "Saving..." : "Save & Continue"}
+            {"Next"}
           </button>
         </div>
       </div>

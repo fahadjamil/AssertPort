@@ -1,8 +1,14 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Popup from "../../shared/Popup";
+import { Button } from "react-bootstrap";
+import LoadingSpinner from "../../shared/LoadingSpinner";
 
-export default function CreditScoreForm({ application, setActiveTab,refreshApplication }) {
+export default function CreditScoreForm({
+  application,
+  setActiveTab,
+  refreshApplication,
+}) {
   const [formData, setFormData] = useState({
     id: application?.id ?? "",
     applicantName: application?.name ?? "",
@@ -11,7 +17,7 @@ export default function CreditScoreForm({ application, setActiveTab,refreshAppli
     creditScoreStatus: "pending",
     creditHistory: [],
     existingLoans: [],
-    creditAmount: application?.credit_limit?? "", // ✅ new field
+    creditAmount: application?.credit_limit ?? "", // ✅ new field
     monthlyIncome: application?.grossSalary ?? 0,
     monthlyExpenses: application?.netHouseholdIncome ?? 0,
     debtToIncomeRatio: 0,
@@ -19,63 +25,152 @@ export default function CreditScoreForm({ application, setActiveTab,refreshAppli
   });
 
   const [isStatusLoading, setIsLoading] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [loading, setLoading] = useState(false);
   const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
   const [popup, setPopup] = useState({
     type: "",
     message: "",
     show: false,
   });
+  const handleReject = () => {
+    setRejectReason("");
+    setShowRejectModal(true);
+  };
+  const handleConfirmReject = async () => {
+    setLoading(true);
+    if (!rejectReason.trim()) {
+      setPopup({
+        type: "error",
+        message: "Please provide a reason for rejection.",
+        show: true,
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseURL}/application/update/statuses`,
+        {
+          id: application?.id,
+          rejection: {
+            rejectionReason: rejectReason,
+          },
+        }
+      );
+
+      setPopup({
+        type: "success",
+        message: response.data?.message || "Application rejected successfully.",
+        show: true,
+      });
+      setLoading(false);
+      setShowRejectModal(false);
+      await refreshApplication();
+    } catch (error) {
+      setPopup({
+        type: "error",
+        message: error?.response?.data?.message || "Rejection failed.",
+        show: true,
+      });
+      setLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleStatuesSubmission = async () => {
-  if (!formData.comments.trim()) {
-    setPopup({
-      type: "error",
-      message: "Please enter a comment before submitting.",
-      show: true,
-    });
-    return;
-  }
+    setIsLoading(true);
+    setLoading(true);
 
-  setIsLoading(true);
+    try {
+      const result = await axios.put(`${baseURL}/application/update/statuses`, {
+        id: formData.id,
+        creditScore: {
+          credit_limit: formData.creditAmount,
+        },
+      });
 
-  try {
-    const result = await axios.put(`${baseURL}/application/update/status`, {
-      id: formData.id,
-      notes: formData.comments,
-      credit_limit: formData.creditAmount,
-      statusKey: "contract",
-    });
-
-    setPopup({
-      type: "success",
-      message: result.data?.message || "Status updated successfully.",
-      show: true,
-    });
-    await refreshApplication();
-    setTimeout(() => {
+      setPopup({
+        type: "success",
+        message: result.data?.message || "Status updated successfully.",
+        show: true,
+      });
+      await refreshApplication();
+      setTimeout(() => {
         setActiveTab("contract");
-      }, 1500); 
+      }, 1500);
+      setLoading(false);
+    } catch (error) {
+      console.error(error);
 
-    
-  } catch (error) {
-    console.error(error);
-
-    setPopup({
-      type: "error",
-      message:
-        error?.response?.data?.message ||
-        error.message ||
-        "An error occurred while updating status.",
-      show: true,
-    });
-  } finally {
-    setIsLoading(false);
+      setPopup({
+        type: "error",
+        message:
+          error?.response?.data?.message ||
+          error.message ||
+          "An error occurred while updating status.",
+        show: true,
+      });
+      setLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center mt-5">
+        <LoadingSpinner small overlay />
+      </div>
+    );
   }
-};
-
-
   return (
     <div className="container-Fluid mt-4">
+      {showRejectModal && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex="-1"
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title text-danger">
+                  <i className="bi bi-x-circle-fill me-2" /> Reject Application
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowRejectModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <label className="form-label">Reason for Rejection</label>
+                <textarea
+                  className="form-control"
+                  rows="4"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejection..."
+                ></textarea>
+              </div>
+              <div className="modal-footer">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="danger" onClick={handleConfirmReject}>
+                  {"Confirm Reject"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <Popup
         type={popup.type}
         message={popup.message}
@@ -104,11 +199,11 @@ export default function CreditScoreForm({ application, setActiveTab,refreshAppli
               <input
                 type="text"
                 className="form-control"
-                value={formData.cnic}
+                value={application?.cnic}
                 readOnly
               />
             </div>
-            <div className="col-md-6">
+            {/* <div className="col-md-6">
               <label className="form-label">Monthly Income (PKR)</label>
               <input
                 type="text"
@@ -125,20 +220,28 @@ export default function CreditScoreForm({ application, setActiveTab,refreshAppli
                 value={Number(formData.monthlyExpenses).toLocaleString()}
                 readOnly
               />
-            </div>
+            </div> */}
             <div className="col-md-6">
               <label className="form-label">Credit Limit Amount (PKR)</label>
               <input
-                type="number"
+                type="text" // use text to allow formatted display
                 className="form-control"
-                min="0" // ✅ HTML validation
-                value={formData.creditAmount}
+                value={
+                  formData.creditAmount
+                    ? formData.creditAmount.toLocaleString("en-PK")
+                    : ""
+                }
                 onChange={(e) => {
-                  const value = Number(e.target.value);
-                  setFormData({
-                    ...formData,
-                    creditAmount: value,
-                  });
+                  // Remove commas before converting to number
+                  const rawValue = e.target.value.replace(/,/g, "");
+                  const value = Number(rawValue);
+
+                  if (!isNaN(value)) {
+                    setFormData({
+                      ...formData,
+                      creditAmount: value,
+                    });
+                  }
                 }}
                 placeholder="Enter loan amount"
               />
@@ -232,7 +335,7 @@ export default function CreditScoreForm({ application, setActiveTab,refreshAppli
             {(formData.debtToIncomeRatio * 100).toFixed(1)}% */}
           </div>
 
-          <div className="mb-3">
+          {/* <div className="mb-3">
             <label className="form-label">Comments</label>
             <textarea
               className="form-control"
@@ -242,21 +345,18 @@ export default function CreditScoreForm({ application, setActiveTab,refreshAppli
                 setFormData({ ...formData, comments: e.target.value })
               }
             ></textarea>
-          </div>
+          </div> */}
 
           <div className="d-flex flex-row-reverse">
-            {/* <button
-              className="btn btn-secondary"
-              onClick={handleCheckCreditScore}
-            >
-              {isChecking ? "Checking..." : "Check Credit Score"}
-            </button> */}
             <button
               className="btn btn-primary"
               onClick={handleStatuesSubmission}
             >
-              {isStatusLoading ? "Saving..." : "Save & Continue"}
+              {"Next"}
             </button>
+            <Button variant="danger" onClick={handleReject}>
+              Reject
+            </Button>
           </div>
         </div>
       </div>

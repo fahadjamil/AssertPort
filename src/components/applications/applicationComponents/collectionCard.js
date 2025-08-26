@@ -4,13 +4,23 @@ import LoadingSpinner from "../../shared/LoadingSpinner";
 import moment from "moment";
 import MuiCalendarView from "../../shared/MUICalenderView";
 import Popup from "../../shared/Popup";
+import { Button } from "react-bootstrap";
 
-const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
+const CollectionCard = ({
+  application,
+  setActiveTab,
+  setApplication,
+  refreshApplication,
+}) => {
   const [agents, setAgents] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [loadingAgents, setLoadingAgents] = useState(true);
   const [scheduledDate, setScheduledDate] = useState(null);
   const [scheduledTime, setScheduledTime] = useState(null);
   const [assignedAgent, setAssignedAgent] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isStatusLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [popup, setPopup] = useState({
     type: "",
@@ -25,7 +35,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
     inspectionStatus: application?.inspectionStatus,
     AssetInspectiondetails:
       application?.CarInspection?.asset_id === application?.Asset?.id
-        ? application.Asset
+        ? application?.Asset
         : null,
   });
 
@@ -38,6 +48,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
   useEffect(() => {
     const fetchAgents = async () => {
       try {
+        const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
         const response = await axios.get(`${baseURL}/agent/get-all`);
         setAgents(response.data.data);
       } catch (error) {
@@ -47,7 +58,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
       }
     };
     fetchAgents();
-  }, [baseURL]);
+  }, []);
 
   useEffect(() => {
     if (application?.collectionDate || application?.collectionTime) {
@@ -104,6 +115,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
       : [];
 
   const handleScheduleSubmit = async () => {
+    setLoading(true);
     const { date, time, agentId } = formInputs;
     const agent = agents.find((a) => a.id === agentId);
 
@@ -143,6 +155,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
 
         setScheduledTime(formattedDisplayTime);
         setAssignedAgent(agent);
+        setLoading(false);
 
         setPopup({
           type: "success",
@@ -169,19 +182,29 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
         message: "Could not schedule collection. Please try again.",
         show: true,
       });
+      setLoading(false);
     } finally {
       setLoadingAgents(false);
     }
   };
 
   const handlePickedUp = async () => {
+    setLoading(true);
+
     setLoadingAgents(true);
     try {
-      const response = await axios.put(`${baseURL}/application/update/status`, {
-        id: application?.id,
-        filePickupStatus: "pending",
-        statusKey: "lien_marking",
-      });
+      const response = await axios.put(
+        `${baseURL}/application/update/statuses`,
+        {
+          id: application?.id,
+          filePickUp: {
+            file_collection_address: application?.file_collection_address,
+            collectionDate: scheduledDate,
+            collectionTime: scheduledTime,
+            additionalInstructions: "",
+          },
+        }
+      );
 
       if (response.status === 200) {
         setPopup({
@@ -189,18 +212,20 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
           message: "File collected successfully.",
           show: true,
         });
-         await refreshApplication();
+        await refreshApplication();
 
         // Delay tab switch for 5 seconds
         setTimeout(() => {
           setActiveTab("lien Marking");
         }, 5000);
+        setLoading(false);
       } else {
         setPopup({
           type: "error",
           message: "Unexpected response from server.",
           show: true,
         });
+        setLoading(false);
       }
     } catch (error) {
       setPopup({
@@ -208,8 +233,63 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
         message: "Could not schedule collection. Please try again.",
         show: true,
       });
+      setLoading(false);
     } finally {
       setLoadingAgents(false);
+    }
+  };
+  const handleReject = () => {
+    setRejectReason("");
+    setShowRejectModal(true);
+  };
+
+  const handleConfirmReject = async () => {
+    setLoading(true);
+
+    if (!rejectReason.trim()) {
+      setPopup({
+        type: "error",
+        message: "Please provide a reason for rejection.",
+        show: true,
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseURL}/application/update/statuses`,
+        {
+          id: application.id,
+          rejection: {
+            rejectionReason: rejectReason,
+          },
+        }
+      );
+
+      setPopup({
+        type: "success",
+        message: response.data?.message || "Application rejected successfully.",
+        show: true,
+      });
+      setLoading(false);
+
+      setShowRejectModal(false);
+      await refreshApplication();
+      setTimeout(() => {
+        setApplication("rejected");
+        // activeTabRef.current = "car";
+        // setActiveTab("car");
+      }, 1500);
+    } catch (error) {
+      setPopup({
+        type: "error",
+        message: error?.response?.data?.message || "Rejection failed.",
+        show: true,
+      });
+      setLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -232,16 +312,62 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
     );
   };
 
-  if (loadingAgents) {
+  if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center mt-5">
-        <LoadingSpinner small />
+        <LoadingSpinner small overlay />
       </div>
     );
   }
-
   return (
     <>
+      {showRejectModal && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex="-1"
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title text-danger">
+                  <i className="bi bi-x-circle-fill me-2" /> Reject Application
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowRejectModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <label className="form-label">Reason for Rejection</label>
+                <textarea
+                  className="form-control"
+                  rows="4"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejection..."
+                ></textarea>
+              </div>
+              <div className="modal-footer">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleConfirmReject}
+                  disabled={isStatusLoading}
+                >
+                  {isStatusLoading ? "Rejecting..." : "Confirm Reject"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <Popup
         type={popup.type}
         message={popup.message}
@@ -255,7 +381,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
           <div className="card-header d-flex justify-content-between">
             <div className="d-flex align-items-center gap-2">
               <i className="bi bi-search text-primary"></i>
-              <h5 className="mb-0">Document Collection Information</h5>
+              <h5 className="mb-0">Submission of file Information</h5>
             </div>
             <button
               className="btn btn-outline-success"
@@ -332,18 +458,18 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
       {/* Collection Scheduling */}
       <div className="card mb-4">
         <div className="card-header">
-          <h5 className="card-title mb-0">Car File Collection</h5>
+          <h5 className="card-title mb-0">Car file Submission</h5>
           <small className="text-muted">
-            Schedule and track car file collection
+            Schedule and track car file Submission
           </small>
         </div>
         <div className="card-body">
           <div className="row">
             {/* Form Section */}
             <div className="col-md-6">
-              <h6>Collection Details</h6>
+              <h6>Submission Details</h6>
               <p className="text-muted">
-                Schedule a collection for the car file
+                Schedule a Submission for the car file
               </p>
 
               {["date", "time"].map((field) => (
@@ -381,13 +507,17 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
               </div>
 
               <div className="d-flex gap-2">
+                <Button variant="danger" onClick={handleReject}>
+                  Reject
+                </Button>
                 <button
                   className="btn btn-primary"
                   onClick={handleScheduleSubmit}
                 >
-                  Schedule Collection
+                  Schedule Submission
                 </button>
                 <button
+                  disabled={!assignedAgent}
                   className="btn btn-outline-secondary"
                   onClick={handlePickedUp}
                 >
@@ -399,7 +529,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
             {/* Status Section */}
             <div className="col-md-6">
               <div className="border p-3 rounded">
-                <h6 className="mb-3">Pickup Status</h6>
+                <h6 className="mb-3">Submission Status</h6>
                 <div className="d-flex justify-content-between mb-2">
                   <strong>Status</strong>
                   {getStatusBadge(application?.filePickupStatus || "pending")}
@@ -416,7 +546,7 @@ const CollectionCard = ({ application, setActiveTab,refreshApplication }) => {
                   </p>
                 </div>
                 <div className="mb-2">
-                  <strong>Collection Agent</strong>
+                  <strong>Submission Agent</strong>
                   <p className="text-muted mb-0">
                     {assignedAgent ? assignedAgent.name : "Not assigned"}
                   </p>

@@ -80,8 +80,9 @@ const Applications = ({ status }) => {
   };
 
   const handleClick = (id, formType) => {
+    const maskedId = btoa(id); // encode UUID
     localStorage.setItem("formType", formType);
-    navigate(`/application/${id}`);
+    navigate(`/application/${maskedId}`);
   };
 
   const handleApproveApplication = (id) => {
@@ -159,7 +160,13 @@ const Applications = ({ status }) => {
     </Pagination>
   );
 
-  if (loading) return <LoadingSpinner asOverlay />;
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center mt-5">
+        <LoadingSpinner small overlay />
+      </div>
+    );
+  }
 
   return (
     <Container

@@ -4,8 +4,15 @@ import { IdDocumentsSection } from "./idDocumentsSection";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import Popup from "../../shared/Popup";
+import { Button } from "react-bootstrap";
+import LoadingSpinner from "../../shared/LoadingSpinner";
 
-const CarVerificationForm = ({ application, setActiveTab, setApplication,refreshApplication }) => {
+const CarVerificationForm = ({
+  application,
+  setActiveTab,
+  setApplication,
+  refreshApplication,
+}) => {
   const [formData, setFormData] = useState({
     id: application?.id ?? "",
     make: application?.Asset?.make?.name ?? "",
@@ -32,6 +39,9 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication,refresh
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState([]);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef();
   const [popup, setPopup] = useState({
     type: "",
@@ -40,47 +50,95 @@ const CarVerificationForm = ({ application, setActiveTab, setApplication,refresh
   });
   const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
 
-const handleStatusSubmission = async () => {
-  if (!formData.comments.trim()) return;
+  const handleStatusSubmission = async () => {
+    setIsLoading(true);
+    setLoading(true);
 
-  setIsLoading(true);
+    try {
+      const endpoint = `${baseURL}/application/update/statuses`;
 
-  try {
-    const endpoint = `${baseURL}/application/update/status`;
+      const response = await axios.put(endpoint, {
+        id: formData.id,
+        underReviewProcess: {
+          carVerificationStatus: "Approved", //3rd step
+        },
+      });
+ setLoading(false);
+      setPopup({
+        type: "success",
+        message: response.data?.message || "Status updated successfully.",
+        show: true,
+      });
+      await refreshApplication();
 
-    const response = await axios.put(endpoint, {
-      id: formData.id,
-      notes: formData.comments,
-      statusKey: "inspection",
-    });
+      // Optional: delay before moving to next tab
+      setTimeout(() => {
+        setActiveTab("inspection");
+      }, 1500);
+    } catch (error) {
+      console.error(error);
 
-    setPopup({
-      type: "success",
-      message: response.data?.message || "Status updated successfully.",
-      show: true,
-    });
-    await refreshApplication();
+      const errorMessage =
+        error?.response?.data?.message || error.message || "An error occurred.";
 
-    // Optional: delay before moving to next tab
-    setTimeout(() => {
-      setActiveTab("inspection");
-    }, 1500);
-  } catch (error) {
-    console.error(error);
+      setPopup({
+        type: "error",
+        message: errorMessage,
+        show: true,
+      });
+       setLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleReject = () => {
+    setRejectReason("");
+    setShowRejectModal(true);
+  };
+  const handleConfirmReject = async () => {
+     setLoading(true);
+    if (!rejectReason.trim()) {
+      setPopup({
+        type: "error",
+        message: "Please provide a reason for rejection.",
+        show: true,
+      });
+      return;
+    }
 
-    const errorMessage =
-      error?.response?.data?.message || error.message || "An error occurred.";
-
-    setPopup({
-      type: "error",
-      message: errorMessage,
-      show: true,
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseURL}/application/update/statuses`,
+        {
+          id: formData.id,
+          rejection: {
+            rejectionReason: rejectReason,
+          },
+        }
+      );
+setLoading(false);
+      setPopup({
+        type: "success",
+        message: response.data?.message || "Application rejected successfully.",
+        show: true,
+      });
+      setShowRejectModal(false);
+      await refreshApplication();
+      setTimeout(() => {
+        setApplication("rejected");
+      }, 1500);
+    } catch (error) {
+      setPopup({
+        type: "error",
+        message: error?.response?.data?.message || "Rejection failed.",
+        show: true,
+      });
+      setLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleSelectedDoc = (value) => {
     setSelectedDocs((prev) =>
@@ -99,7 +157,9 @@ const handleStatusSubmission = async () => {
   };
 
   const handleUploadConfirmed = async () => {
+    setLoading(true);
     if (!previewFile) return;
+
     setIsVerifying(true);
     setShowPreview(false);
 
@@ -107,31 +167,37 @@ const handleStatusSubmission = async () => {
       const form = new FormData();
       form.append("id", formData.id);
       form.append("carVerificationPhoto", previewFile);
-      console.log("form" + formData);
 
       const endpoint = `${baseURL}/application/update-vehicle-verfication-photo`;
-
-      console.log("endpoint" + endpoint);
-
       const res = await axios.put(endpoint, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       const updatedPhoto = res?.data?.data?.carVerificationPhoto ?? [];
+
       if (updatedPhoto.length > 0) {
-        setApplication({
-          url: updatedPhoto[0].url,
-          path: updatedPhoto[0].public_id,
-        });
+        setApplication((prev) => ({
+          ...prev,
+          carVerificationPhoto: {
+            url: updatedPhoto[0].url,
+            path: updatedPhoto[0].public_id,
+          },
+        }));
       }
+
+      await refreshApplication();
 
       setFormData((prev) => ({
         ...prev,
         verificationStatus: "verified",
         uploadedImage: previewFile,
       }));
+      setLoading(false);
     } catch (err) {
       console.error("Upload failed", err);
+      setLoading(false);
+      // Optionally show a popup here:
+      // setPopup({ type: "error", message: "Upload failed", show: true });
     } finally {
       setIsVerifying(false);
     }
@@ -155,15 +221,15 @@ const handleStatusSubmission = async () => {
       }
     });
 
-    for (let pair of form.entries()) {
-      console.log(pair[0] + ":", pair[1]);
-    }
+    // for (let pair of form.entries()) {
+    //   console.log(pair[0] + ":", pair[1]);
+    // }
 
     const endpoint = `${baseURL}/application/update-document`;
 
     try {
       const res = await axios.post(endpoint, form, {
-        // headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       console.log("Reupload success:", res.data);
     } catch (error) {
@@ -184,9 +250,62 @@ const handleStatusSubmission = async () => {
       <span className={`badge bg-${map[status] || "secondary"}`}>{status}</span>
     );
   };
-
+ if (loading) {
+  return (
+    <div className="d-flex justify-content-center align-items-center mt-5">
+        <LoadingSpinner small overlay/>
+      </div>
+  );
+}
   return (
     <div className="container-fluid py-4">
+      {showRejectModal && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex="-1"
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title text-danger">
+                  <i className="bi bi-x-circle-fill me-2" /> Reject Application
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowRejectModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <label className="form-label">Reason for Rejection</label>
+                <textarea
+                  className="form-control"
+                  rows="4"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejection..."
+                ></textarea>
+              </div>
+              <div className="modal-footer">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleConfirmReject}
+                  disabled={isStatusLoading}
+                >
+                  {isStatusLoading ? "Rejecting..." : "Confirm Reject"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <Popup
         type={popup.type}
         message={popup.message}
@@ -303,7 +422,7 @@ const handleStatusSubmission = async () => {
               />
             </div>
 
-            <div className="col-6">
+            {/* <div className="col-6">
               <small className="text-muted">Condition</small>
               <input
                 type="text"
@@ -311,7 +430,7 @@ const handleStatusSubmission = async () => {
                 value={formData.condition || ""}
                 readOnly
               />
-            </div>
+            </div> */}
 
             <div className="col-6">
               <small className="text-muted">Mileage</small>
@@ -343,11 +462,6 @@ const handleStatusSubmission = async () => {
                 label: "Bank Statement",
                 url: formData?.bankStatement?.[0]?.url,
               },
-              {
-                label: "Salary Slip / Income Proof",
-                url: formData?.salarySlipOrIncomeProof?.[0]?.url,
-              },
-              { label: "Utility Bill", url: formData?.utilityBill?.[0]?.url },
               {
                 label: "Car Verification Photo",
                 url: formData?.carVerificationPhoto?.[0]?.url,
@@ -416,26 +530,22 @@ const handleStatusSubmission = async () => {
               Upload Again
             </button>
           </div> */}
-
-          <div className="mb-3">
-            <label className="form-label">Comments</label>
-            <textarea
-              className="form-control"
-              rows="3"
-              value={formData.comments}
-              onChange={(e) =>
-                setFormData({ ...formData, comments: e.target.value })
-              }
-            ></textarea>
+        </div>
+        {formData?.carVerificationPhoto?.[0]?.url ? (
+          <div className="card-footer text-end">
+            <Button variant="danger" onClick={handleReject}>
+              Reject
+            </Button>
+            <Button
+              className="btn btn-primary"
+              onClick={handleStatusSubmission}
+            >
+              {"Next"}
+            </Button>
           </div>
-        </div>
-
-        <div className="card-footer text-end">
-          <button className="btn btn-secondary me-2">Cancel</button>
-          <button className="btn btn-primary" onClick={handleStatusSubmission}>
-            {isStatusLoading ? "Saving..." : "Save & Continue"}
-          </button>
-        </div>
+        ) : (
+          ""
+        )}
       </div>
     </div>
   );

@@ -26,10 +26,12 @@ import ApplicationAuditLog from "./applicationComponents/applicationAuditLog";
 import LoadingSpinner from "../shared/LoadingSpinner";
 import InsuranceForm from "./applicationComponents/insurance";
 import FinalReview from "./applicationComponents/finalReviewStep";
+import { decode as atob } from "js-base64";
 
 function ApplicationPage() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: maskedId } = useParams();
+  const realId = atob(maskedId);
   const formType = localStorage.getItem("formType");
 
   const [application, setApplication] = useState(null);
@@ -39,26 +41,26 @@ function ApplicationPage() {
   const [isStatusLoading, setIsLoading] = useState(false);
   const activeTabRef = useRef("overview");
   const fetchApplication = async () => {
-    const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
-    try {
-      const response = await axios.get(
-        `${baseURL}/admin/form/get-by-id?id=${id}&formType=${formType}`
-      );
+  const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
+  try {
+    const response = await axios.get(
+      `${baseURL}/admin/form/get-by-id?id=${realId}&formType=${formType}`
+    );
 
-      if (response.data.success) {
-        const appData = response.data.data;
-        sanitizePhoneFields(appData);
-        setApplication(appData);
-      }
-    } catch (error) {
-      console.error("Failed to fetch application:", error);
-    } finally {
-      setLoading(false);
+    if (response.data.success) {
+      const appData = response.data.data;
+      sanitizePhoneFields(appData);
+      setApplication(appData);
     }
-  };
+  } catch (error) {
+    console.error("Failed to fetch application:", error);
+  } finally {
+    setLoading(false);
+  }
+};
   useEffect(() => {
-    fetchApplication();
-  }, [id, formType]);
+  fetchApplication();
+}, [realId, formType]);
 
   const sanitizePhoneFields = (data) => {
     const fixJson = (str) => {
@@ -186,13 +188,13 @@ function ApplicationPage() {
                           </div>
                           <div className="col-6">
                             <small className="text-muted">CNIC</small>
-                            <p>{application?.user?.cnic_number || "N/A"}</p>
+                            <p>{application?.cnic || "N/A"}</p>
                           </div>
                           <div className="col-6">
                             <small className="text-muted">Phone</small>
                             <p>
-                              {application?.phone?.countryCode ?? "-"}
-                              {application?.phone?.phone ?? "-"}
+                              {application?.user?.country_code ?? "-"}
+                              {application?.user?.phone ?? "-"}
                             </p>
                           </div>
                           <div className="col-6">
@@ -422,6 +424,13 @@ function ApplicationPage() {
             <InsuranceForm
               application={application}
               setActiveTab={setActiveTab}
+              refreshApplication={fetchApplication}
+              setApplication={(status) => {
+                setApplication({
+                  ...application,
+                  contractStatus: status,
+                });
+              }}
             />
           </Tab.Pane>
           <Tab.Pane eventKey="final Review">
@@ -429,6 +438,12 @@ function ApplicationPage() {
               application={application}
               setActiveTab={setActiveTab}
               refreshApplication={fetchApplication}
+              setApplication={(status) => {
+                setApplication({
+                  ...application,
+                  contractStatus: status,
+                });
+              }}
             />
           </Tab.Pane>
         </Tab.Content>

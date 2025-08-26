@@ -15,17 +15,18 @@ import {
 import CalendarView from "../../shared/CalendarView";
 import MuiCalendarView from "../../shared/MUICalenderView";
 import Popup from "../../shared/Popup";
+import LoadingSpinner from "../../shared/LoadingSpinner";
 
 export function InspectionReportForm({
   application,
   setActiveTab,
   setApplication,
-  refreshApplication
+  refreshApplication,
 }) {
   const initializeFormData = () => {
     const report = application?.report?.[0] || {};
     return {
-      inspectionId: application?.inspectionId,
+      inspectionId: application?.CarInspection?.id || "",
       inspectionDate: "",
       inspectionLocation: "",
       inspectorName: report.inspectorName || "",
@@ -39,15 +40,18 @@ export function InspectionReportForm({
       estimatedValue: report.estimatedValue || "",
       comments: report.comments || "",
       pakwheelsReportId: report.pakwheelsReportId || "",
-      inspectionStatus: application?.inspectionStatus,
+      inspectionStatus: application?.inspectionStatus || "",
       AssetInspectiondetails:
-        application?.CarInspection?.asset_id === application?.Asset?.id
+        application?.CarInspection?.asset_id &&
+        application?.Asset?.id &&
+        application.CarInspection.asset_id === application.Asset.id
           ? application.Asset
           : null,
     };
   };
 
   const [formData, setFormData] = useState(initializeFormData);
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     setFormData(initializeFormData());
     console.log("formData");
@@ -58,12 +62,65 @@ export function InspectionReportForm({
   const [apiError, setApiError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const baseURL = process.env.REACT_APP_CREDIT_PORT_BASE_URL;
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [popup, setPopup] = useState({
     type: "",
     message: "",
     show: false,
   });
+  const handleReject = () => {
+    setRejectReason("");
+    setShowRejectModal(true);
+  };
+  const handleConfirmReject = async () => {
+    setLoading(true);
+    if (!rejectReason.trim()) {
+      setPopup({
+        type: "error",
+        message: "Please provide a reason for rejection.",
+        show: true,
+      });
+      setLoading(false);
 
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseURL}/application/update/statuses`,
+        {
+          id: application?.id,
+          rejection: {
+            rejectionReason: rejectReason,
+          },
+        }
+      );
+
+      setPopup({
+        type: "success",
+        message: response.data?.message || "Application rejected successfully.",
+        show: true,
+      });
+      setLoading(false);
+      setShowRejectModal(false);
+      await refreshApplication();
+      setTimeout(() => {
+        setApplication("rejected");
+      }, 1500);
+    } catch (error) {
+      setPopup({
+        type: "error",
+        message: error?.response?.data?.message || "Rejection failed.",
+        show: true,
+      });
+      setLoading(false);
+    } finally {
+      setIsLoading(false);
+      setLoading(false);
+    }
+  };
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -91,13 +148,14 @@ export function InspectionReportForm({
       : [];
 
   const handleSubmit = (e) => {
+    setLoading(true);
     e.preventDefault();
     setIsLoading(true);
     setTimeout(() => {
       setFormData((prev) => ({
         ...prev,
         inspectionStatus: "verified",
-        inspectionId: application?.Car?.id,
+        inspectionId: application?.CarInspection?.id,
       }));
       handleInspectionReport();
     }, 1500);
@@ -118,25 +176,25 @@ export function InspectionReportForm({
   ];
 
   const validateForm = () => {
-  const isReinspection = application?.CarInspection?.report;
+    const isReinspection = application?.CarInspection?.report;
 
-  for (const field of requiredFields) {
-    if (isReinspection && field !== "comments") continue;
+    for (const field of requiredFields) {
+      if (isReinspection && field !== "comments") continue;
 
-    if (!formData[field] || formData[field].toString().trim() === "") {
-      setPopup({
-        type: "error",
-        message: `Please fill in the ${field
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (s) => s.toUpperCase())}`,
-        show: true,
-      });
-      return false;
+      if (!formData[field] || formData[field].toString().trim() === "") {
+        setPopup({
+          type: "error",
+          message: `Please fill in the ${field
+            .replace(/([A-Z])/g, " $1")
+            .replace(/^./, (s) => s.toUpperCase())}`,
+          show: true,
+        });
+        return false;
+      }
     }
-  }
 
-  return true;
-};
+    return true;
+  };
 
   const handleInspectionReport = async () => {
     if (!validateForm()) return;
@@ -145,20 +203,67 @@ export function InspectionReportForm({
     setApiError(null);
 
     try {
-      await axios.post(`${baseURL}/car/inspection/create/report`, formData);
+      // await axios.post(`${baseURL}/car/inspection/create/report`, formData);
+      console.log(formData);
+      const inspectionReport = {
+        accidentHistory:
+          formData.accidentHistory ||
+          application?.CarInspection?.report?.accidentHistory,
+        bodyCondition:
+          formData.bodyCondition ||
+          application?.CarInspection?.report?.bodyCondition,
+        engineCondition:
+          formData.engineCondition ||
+          application?.CarInspection?.report?.engineCondition,
+        estimatedValue:
+          formData.estimatedValue ||
+          application?.CarInspection?.report?.estimatedValue,
+        inspectionDate:
+          formData.inspectionDate ||
+          application?.CarInspection?.report?.inspectionDate,
+        inspectionId:
+          formData.inspectionId ||
+          application?.CarInspection?.report?.inspectionId,
+        inspectionLocation:
+          formData.inspectionLocation ||
+          application?.CarInspection?.report?.inspectionLocation,
+        inspectionStatus:
+          formData.inspectionStatus ||
+          application?.CarInspection?.report?.inspectionStatus,
+        inspectorName:
+          formData.inspectorName ||
+          application?.CarInspection?.report?.inspectorName,
+        interiorCondition:
+          formData.interiorCondition ||
+          application?.CarInspection?.report?.interiorCondition,
+        mileage:
+          formData.mileage || application?.CarInspection?.report?.mileage,
+        pakwheelsReportId:
+          formData.pakwheelsReportId ||
+          application?.CarInspection?.report?.pakwheelsReportId,
+        tiresCondition:
+          formData.tiresCondition ||
+          application?.CarInspection?.report?.tiresCondition,
+        vehicleCondition:
+          formData.vehicleCondition ||
+          application?.CarInspection?.report?.vehicleCondition,
+      };
 
-      const response = await axios.put(`${baseURL}/application/update/status`, {
-        id: application?.id,
-        notes: formData.comments,
-        inspectionStatus: "verified",
-        statusKey: "credit_score",
-      });
+      console.log("inspectionReport" + inspectionReport);
+      const response = await axios.put(
+        `${baseURL}/application/update/statuses`,
+        {
+          id: application?.id,
+          inspectionReport: inspectionReport,
+        }
+      );
 
       setPopup({
         type: "success",
         message: response.data?.message || "Inspection submitted successfully.",
         show: true,
       });
+      setLoading(false);
       await refreshApplication();
 
       // Optional delay before moving to next tab
@@ -179,6 +284,7 @@ export function InspectionReportForm({
         message: errorMessage,
         show: true,
       });
+      setLoading(false);
     } finally {
       setIsLoading(false);
     }
@@ -187,9 +293,59 @@ export function InspectionReportForm({
   const inspectionDateFormatted = formData.inspectionDate
     ? moment(formData.inspectionDate).format("YYYY-MM-DDTHH:mm")
     : "";
-
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center mt-5">
+        <LoadingSpinner small overlay />
+      </div>
+    );
+  }
   return (
     <div className="row">
+      {" "}
+      {showRejectModal && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex="-1"
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title text-danger">
+                  <i className="bi bi-x-circle-fill me-2" /> Reject Application
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowRejectModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <label className="form-label">Reason for Rejection</label>
+                <textarea
+                  className="form-control"
+                  rows="4"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejection..."
+                ></textarea>
+              </div>
+              <div className="modal-footer">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowRejectModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="danger" onClick={handleConfirmReject}>
+                  {"Confirm Reject"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <Popup
         type={popup.type}
         message={popup.message}
@@ -229,7 +385,7 @@ export function InspectionReportForm({
               </div>
               <div className="col-md-6">
                 <small className="text-muted">Location</small>
-                <p>{formData?.CarInspection?.location || "N/A"}</p>
+                <p>{application?.CarInspection?.location || "N/A"}</p>
               </div>
               <div className="col-md-6">
                 <small className="text-muted">Date</small>
@@ -388,7 +544,6 @@ export function InspectionReportForm({
           </div>
         </div>
       </div>
-
       <Form onSubmit={handleSubmit}>
         {!application?.CarInspection?.report && (
           <div className="card my-3">
@@ -588,28 +743,15 @@ export function InspectionReportForm({
             >
               {formData.inspectionStatus || "Pending"}
             </Badge>
-
-            <Form.Group controlId="comments">
-              <Form.Label>Inspector Comments</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={4}
-                placeholder="Add inspection comments..."
-                value={formData.comments}
-                onChange={(e) => handleChange("comments", e.target.value)}
-              />
-            </Form.Group>
           </Card.Body>
         </Card>
 
-        {apiError && <Alert variant="danger">{apiError}</Alert>}
-
         <div className="d-flex justify-content-end gap-2 my-2">
-          <Button variant="outline-secondary" type="button">
-            Cancel
+          <Button variant="danger" onClick={handleReject}>
+            Reject
           </Button>
           <Button variant="primary" type="submit">
-            {isLoading ? "Saving..." : "Save Inspection Report"}
+            {"Next"}
           </Button>
         </div>
       </Form>
